@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ECO — Paper Review</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/white.css" id="theme">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/monokai.css">
+<style>
+/* === Projector-readable font floors === */
+:root { --r-main-font-size: 36px; }
+.reveal { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+.reveal h1 { font-size: 2.4em; line-height: 1.15; color: #1a365d; margin-bottom: 0.4em; }
+.reveal h2 { font-size: 1.7em; line-height: 1.2; color: #1a365d; margin-bottom: 0.6em; }
+.reveal h3 { font-size: 1.25em; line-height: 1.25; color: #2c5282; }
+.reveal p { font-size: 1em; line-height: 1.45; }
+.reveal ul, .reveal ol { font-size: 1em; line-height: 1.5; margin-left: 0.6em; }
+.reveal li { margin: 0.4em 0; }
+.reveal li li { font-size: 0.9em; }
+.reveal pre { font-size: 0.7em; box-shadow: none; width: 95%; margin: 0.4em auto; }
+.reveal pre code { padding: 0.9em 1.2em; max-height: none; line-height: 1.45; border-radius: 6px; }
+.reveal small, .reveal .footnote { font-size: 0.55em; color: #718096; }
+.reveal section { text-align: left; }
+.reveal section.center { text-align: center; }
+
+/* Two-column layout */
+.reveal .columns { display: flex; gap: 2em; align-items: flex-start; margin-top: 0.5em; }
+.reveal .columns > div { flex: 1; }
+.reveal .col-label { font-size: 0.7em; text-transform: uppercase; letter-spacing: 0.06em; color: #718096; margin-bottom: 0.4em; }
+
+/* Numbered flow steps (used on entry-point end-to-end slide) */
+.reveal .flow-steps { list-style: none; padding: 0; margin: 0; counter-reset: step; }
+.reveal .flow-steps li {
+  counter-increment: step;
+  padding: 0.55em 0 0.55em 3em;
+  position: relative;
+  font-size: 0.85em;
+  line-height: 1.4;
+  border-bottom: 1px solid #e2e8f0;
+}
+.reveal .flow-steps li:last-child { border-bottom: none; }
+.reveal .flow-steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.4em;
+  width: 2.1em;
+  height: 2.1em;
+  background: #2b6cb0;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85em;
+}
+
+/* Anti-pattern slide: patterns stacked vertically on the left, image on the right */
+.reveal .anti-layout { display: flex; gap: 1.6em; margin-top: 0.3em; align-items: center; }
+.reveal .anti-layout > .left { flex: 1; display: flex; flex-direction: column; gap: 0.55em; min-width: 0; }
+.reveal .anti-layout > .right { flex: 1; display: flex; align-items: center; justify-content: center; }
+.reveal .anti-layout .pattern h3 { font-size: 0.9em; color: #2c5282; margin: 0 0 0.2em; font-weight: 700; }
+.reveal .anti-layout .pattern .ba-row { display: flex; gap: 0.7em; }
+.reveal .anti-layout .pattern .ba-row > div { flex: 1; min-width: 0; }
+.reveal .anti-layout .pattern pre { margin: 0; width: 100%; font-size: 0.6em; }
+.reveal .anti-layout .pattern pre code { padding: 0.45em 0.75em; line-height: 1.35; }
+.reveal .anti-layout .pattern .ba-label { margin: 0.1em 0 0.05em; font-size: 0.55em; }
+.reveal .anti-layout .pattern .ba-explain { font-size: 0.55em; color: #4a5568; font-style: italic; margin: 0.25em 0.15em 0; line-height: 1.3; }
+.reveal .anti-layout .right img { max-width: 100%; max-height: 840px; border-radius: 4px; box-shadow: 0 2px 14px rgba(0,0,0,0.12); }
+
+/* Interactive pipeline */
+.reveal .pipeline-interactive { margin: 0.2em 0 0.6em; }
+.reveal .pipeline-interactive svg { width: 100%; height: auto; max-height: 300px; display: block; margin: 0 auto; }
+.reveal .pipeline-interactive svg .stage-box { cursor: pointer; transition: opacity 0.2s; }
+.reveal .pipeline-interactive svg .stage-box .stage-rect { transition: stroke-width 0.15s, filter 0.15s; }
+.reveal .pipeline-interactive svg .stage-box.active .stage-rect { stroke-width: 7; filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.85)); }
+.reveal .pipeline-interactive svg .stage-box.dimmed { opacity: 0.5; }
+.reveal .pipeline-interactive svg .stage-box:hover { opacity: 1; }
+.reveal .pipeline-hint { text-align: center; font-size: 0.6em; color: #718096; font-style: italic; margin: 0.1em 0 0.3em; }
+.reveal .stage-detail { border-top: 2px solid #e2e8f0; padding-top: 0.5em; min-height: 380px; }
+.reveal .stage-detail .stage-content { display: none; }
+.reveal .stage-detail .stage-content.active { display: block; }
+.reveal .stage-detail .stage-content h3 { color: #1a365d; font-size: 1em; margin: 0 0 0.3em; }
+.reveal .stage-detail .stage-content ul { font-size: 0.78em; margin: 0.2em 0 0.4em 0.5em; line-height: 1.4; }
+.reveal .stage-detail .stage-content li { margin: 0.25em 0; }
+.reveal .stage-detail .stage-content li li { font-size: 0.92em; }
+.reveal .stage-detail .stage-content .takeaway { margin-top: 0.5em; font-size: 0.75em; color: #5a3a05; background: #fffbeb; border-left: 5px solid #f59e0b; padding: 0.4em 0.8em; font-style: italic; }
+
+/* Stage 2 (Localization) zoom-in: 3 connected steps */
+.reveal .localize-flow { display: flex; align-items: stretch; gap: 0.6em; margin-top: 0.8em; }
+.reveal .localize-flow .step { flex: 1; background: #f7fafc; border: 2px solid #cbd5e0; border-radius: 10px; padding: 1em 1em 0.7em; position: relative; }
+.reveal .localize-flow .step h3 { color: #1a365d; font-size: 0.95em; margin: 0.3em 0 0.5em; }
+.reveal .localize-flow .step ul { font-size: 0.7em; line-height: 1.4; margin: 0; }
+.reveal .localize-flow .step li { margin: 0.3em 0; }
+.reveal .localize-flow .step li li { font-size: 0.92em; }
+.reveal .localize-flow .step-num {
+  position: absolute; top: -22px; left: -12px;
+  background: #2b6cb0; color: white;
+  width: 46px; height: 46px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.95em; font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+.reveal .localize-flow .arrow { display: flex; align-items: center; font-size: 2.2em; color: #a0aec0; padding: 0 0.1em; }
+.reveal .localize-flow .step .catches { font-size: 0.6em; color: #4a5568; font-style: italic; margin: 0.4em 0 0; border-top: 1px solid #e2e8f0; padding-top: 0.35em; }
+
+/* Stage 3 (Generate) zoom-in: 4 prompting strategies in a grid */
+.reveal .strategy-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.7em; margin-top: 0.8em; }
+.reveal .strategy-grid .strategy { background: #f7fafc; border: 2px solid #cbd5e0; border-radius: 10px; padding: 0.9em 0.9em 0.7em; }
+.reveal .strategy-grid .strategy h3 { font-size: 0.95em; color: #1a365d; margin: 0.1em 0 0.4em; }
+.reveal .strategy-grid .strategy .strat-desc { font-size: 0.7em; color: #2d3748; line-height: 1.4; margin: 0 0 0.5em; }
+.reveal .strategy-grid .strategy .strat-meta { font-size: 0.65em; color: #4a5568; font-style: italic; margin: 0; }
+
+/* Results slide: 3 charts in a row + headline stats above */
+.reveal .results-charts { display: flex; gap: 0.9em; margin: 0.4em 0 0.3em; align-items: flex-start; }
+.reveal .results-charts .chart-box { flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.reveal .results-charts .chart-box img { max-width: 100%; max-height: 440px; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+.reveal .results-charts .chart-label { font-size: 0.6em; color: #4a5568; font-weight: 600; margin-bottom: 0.4em; text-transform: uppercase; letter-spacing: 0.04em; text-align: center; }
+
+/* Interactive results: clickable charts + detail panel below */
+.reveal .results-charts-interactive { display: flex; gap: 1em; margin: 0.3em 0 0.4em; align-items: stretch; }
+.reveal .results-charts-interactive .chart-card {
+  flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0;
+  cursor: pointer; padding: 0.5em; border-radius: 10px; border: 3px solid transparent;
+  transition: all 0.2s; background: #fafafa;
+}
+.reveal .results-charts-interactive .chart-card img { max-width: 100%; max-height: 340px; border-radius: 4px; }
+.reveal .results-charts-interactive .chart-card .chart-label {
+  font-size: 0.55em; color: #4a5568; font-weight: 600; margin-bottom: 0.4em;
+  text-transform: uppercase; letter-spacing: 0.04em; text-align: center;
+}
+.reveal .results-charts-interactive .chart-card.active {
+  border-color: #f59e0b;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.45);
+  background: #fffdf7;
+}
+.reveal .results-charts-interactive .chart-card.dimmed { opacity: 0.55; }
+.reveal .results-charts-interactive .chart-card:hover { opacity: 1; }
+.reveal .chart-hint { text-align: center; font-size: 0.55em; color: #718096; font-style: italic; margin: 0.05em 0 0.3em; }
+
+.reveal .chart-detail { border-top: 2px solid #e2e8f0; padding-top: 0.5em; margin-top: 0.3em; min-height: 200px; }
+.reveal .chart-detail .chart-content { display: none; }
+.reveal .chart-detail .chart-content.active { display: block; }
+.reveal .chart-detail .chart-content h3 { color: #1a365d; font-size: 1em; margin: 0 0 0.3em; }
+.reveal .chart-detail .chart-content ul { font-size: 0.75em; line-height: 1.45; margin: 0 0 0 0.3em; }
+.reveal .chart-detail .chart-content li { margin: 0.3em 0; }
+
+/* Slide 8 (Stage 2 deep dive) — interactive: clickable steps + jargon panel */
+.reveal .localize-flow .step { cursor: pointer; transition: all 0.2s; }
+.reveal .localize-flow .step.active { border-color: #f59e0b; box-shadow: 0 0 16px rgba(245, 158, 11, 0.4); background: #fffdf7; }
+.reveal .localize-flow .step.dimmed { opacity: 0.55; }
+.reveal .localize-flow .step:hover { opacity: 1; }
+.reveal .localize-flow .step.active .step-num,
+.reveal .localize-flow .step.dimmed .step-num { transition: background 0.2s; }
+
+.reveal .locate-detail { border-top: 2px solid #e2e8f0; padding-top: 0.5em; margin-top: 0.4em; min-height: 220px; }
+.reveal .locate-detail .locate-content { display: none; }
+.reveal .locate-detail .locate-content.active { display: block; }
+.reveal .locate-detail .locate-content h4 { color: #1a365d; font-size: 0.9em; margin: 0 0 0.4em; }
+.reveal .locate-detail .locate-content dl { font-size: 0.65em; margin: 0; line-height: 1.4; }
+.reveal .locate-detail .locate-content dt { font-weight: 700; color: #2b6cb0; margin-top: 0.4em; }
+.reveal .locate-detail .locate-content dd { margin: 0.1em 0 0 1.2em; color: #2d3748; }
+
+/* Big stat numbers */
+.reveal .stats { display: flex; justify-content: space-around; margin-top: 1.2em; gap: 1.5em; }
+.reveal .stat { text-align: center; flex: 1; }
+.reveal .stat .num { font-size: 2.1em; font-weight: 700; color: #2b6cb0; line-height: 1; }
+.reveal .stat .lbl { font-size: 0.65em; color: #4a5568; margin-top: 0.5em; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Differentiator highlight boxes */
+.reveal .diff {
+  background: #fffbeb;
+  border-left: 8px solid #f59e0b;
+  padding: 0.7em 1.1em;
+  margin: 0.5em 0;
+}
+.reveal .diff-tag {
+  display: inline-block;
+  background: #f59e0b;
+  color: white;
+  padding: 0.1em 0.55em;
+  border-radius: 4px;
+  font-size: 0.7em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.35em;
+  margin-right: 0.4em;
+  vertical-align: middle;
+}
+
+/* Before / after labels */
+.reveal .ba-label { font-size: 0.7em; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25em; font-weight: 600; }
+.reveal .ba-label.before { color: #c53030; }
+.reveal .ba-label.after { color: #2f855a; }
+.reveal .why { margin-top: 0.8em; font-size: 0.85em; color: #4a5568; font-style: italic; }
+
+/* Title slide */
+.reveal .title-slide { text-align: center; padding-top: 1.5em; }
+.reveal .title-slide h1 { font-size: 3.2em; line-height: 1.1; margin-bottom: 0.2em; }
+.reveal .title-slide .subtitle { font-size: 1em; color: #4a5568; margin-top: 0.4em; }
+.reveal .title-slide .author { font-size: 0.8em; color: #718096; margin-top: 2em; }
+
+.reveal .progress { color: #2b6cb0; }
+.reveal .slide-number { font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+  <!-- Slide 1: Title -->
+  <section class="center title-slide">
+    <h1>ECO</h1>
+    <p class="subtitle">An LLM-Driven Efficient Code Optimizer<br>for Warehouse-Scale Computers</p>
+    <p class="subtitle"><em>Hannah Lin et al. &mdash; Google, 2025</em></p>
+    <p class="author">Paper club presentation</p>
+  </section>
+
+  <!-- Slide 2: Why this paper exists -->
+  <section>
+    <h2>Why this paper exists</h2>
+    <div class="columns" style="align-items: center;">
+      <div style="flex: 1.1;">
+        <ul>
+          <li>Moore's Law has slowed &mdash; no more "free" hardware speedups</li>
+          <li>At Google scale, even a <strong>1% gain</strong> = a small data center's worth of compute</li>
+          <li>The bottleneck: too much code, too few engineers to hand-optimize</li>
+          <li>What exists today (compilers, Clang-Tidy / lint-style heuristics) leaves a lot on the table
+            <ul>
+              <li><em>Clang-Tidy is basically the C++ analogue of <code>pylint</code> / <code>ruff</code> in our world</em></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div style="flex: 1; text-align: center;">
+        <img src="images/Moore's_Law_Transistor_Count_1970-2020.png"
+             alt="Moore's Law transistor count, 1970-2020"
+             style="max-width: 100%; max-height: 560px; border-radius: 6px; box-shadow: 0 2px 14px rgba(0,0,0,0.12);">
+        <p class="footnote" style="margin-top: 0.4em;">Transistor count per chip, 1970&ndash;2020</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 3: ECO in one line -->
+  <section>
+    <h2>ECO in one line</h2>
+    <p style="font-size: 1.2em; margin: 0.4em 0 0.8em;">An LLM that <strong>automatically rewrites slow code</strong> in Google's production fleet &mdash; and ships the changes.</p>
+    <div class="stats">
+      <div class="stat"><div class="num">6,400+</div><div class="lbl">commits landed</div></div>
+      <div class="stat"><div class="num">&gt;99.5%</div><div class="lbl">production success</div></div>
+      <div class="stat"><div class="num">~500k</div><div class="lbl">CPU cores / qtr saved</div></div>
+    </div>
+    <p class="why" style="margin-top: 1.5em;">Same family as the "evolve" papers we study &mdash; today's question is <strong>what makes it different</strong>.</p>
+  </section>
+
+  <!-- Slide 4: End-to-end example (visual hook) -->
+  <section>
+    <h2>ECO in action &mdash; one commit, start to finish</h2>
+    <div class="columns" style="align-items: center;">
+      <div style="flex: 1.1; text-align: center;">
+        <img src="images/An%20LLM-Driven%20Efficient%20Code%20Optimizer%20for%20Warehouse%20Scale%20Computers.png"
+             alt="End-to-end example of ECO deploying a change"
+             style="max-width: 100%; max-height: 760px; border-radius: 6px; box-shadow: 0 2px 14px rgba(0,0,0,0.12);">
+      </div>
+      <div style="flex: 1;">
+        <ol class="flow-steps">
+          <li><strong>Find the slow spot.</strong> Google's fleet profiler tracks CPU usage on all production code. ECO looks for hot functions that <em>look like</em> a known anti-pattern.</li>
+          <li><strong>Write the fix.</strong> A fine-tuned LLM proposes a code edit based on the matching recipe.</li>
+          <li><strong>Check it's safe.</strong> Run existing tests &rarr; LLM reviews its own work &rarr; human code-owner gives final sign-off.</li>
+          <li><strong>Ship and watch.</strong> Merge to production; profiler keeps measuring; auto-revert if anything regresses.</li>
+        </ol>
+        <p class="why" style="margin-top: 1em;">Refer back to this image as we drill into each step.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 5: Anti-pattern catalog (3 of 7 in detail) -->
+  <section>
+    <h2>Anti-pattern catalog &mdash; 3 of 7 in detail</h2>
+    <div class="anti-layout">
+      <div class="left">
+        <div class="pattern">
+          <h3>#1 Unnecessary copy</h3>
+          <div class="ba-row">
+            <div>
+              <div class="ba-label before">Before</div>
+<pre><code data-trim class="language-python">def process(items):
+    items_copy = list(items)
+    for x in items_copy:
+        log(x)</code></pre>
+              <div class="ba-explain">Allocates a copy of every element</div>
+            </div>
+            <div>
+              <div class="ba-label after">After</div>
+<pre><code data-trim class="language-python">def process(items):
+    for x in items:
+        log(x)</code></pre>
+              <div class="ba-explain">Iterates the original &mdash; no copy</div>
+            </div>
+          </div>
+        </div>
+        <div class="pattern">
+          <h3>#2 Redundant lookup</h3>
+          <div class="ba-row">
+            <div>
+              <div class="ba-label before">Before</div>
+<pre><code data-trim class="language-python">if config[k] > 0:
+    threshold = config[k]
+    apply(config[k])</code></pre>
+              <div class="ba-explain">3 hash lookups for the same key</div>
+            </div>
+            <div>
+              <div class="ba-label after">After</div>
+<pre><code data-trim class="language-python">v = config[k]
+if v > 0:
+    threshold = v
+    apply(v)</code></pre>
+              <div class="ba-explain">Look up once, reuse the value</div>
+            </div>
+          </div>
+        </div>
+        <div class="pattern">
+          <h3>#3 Growing a collection</h3>
+          <div class="ba-row">
+            <div>
+              <div class="ba-label before">Before</div>
+<pre><code data-trim class="language-python">out = []
+for x in data:
+    out.append(f(x))</code></pre>
+              <div class="ba-explain">Re-allocates as the list grows</div>
+            </div>
+            <div>
+              <div class="ba-label after">After</div>
+<pre><code data-trim class="language-python">out = [f(x) for x in data]
+# or pre-alloc np.empty</code></pre>
+              <div class="ba-explain">Comp / pre-alloc skips re-allocs</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="right" style="flex-direction: column;">
+        <img src="images/Anti-Pattern%20Categories.png"
+             alt="Anti-pattern categories ECO mined from history">
+        <p class="footnote" style="margin-top: 0.5em; text-align: left; max-width: 95%;">
+          <strong>X-axis:</strong> the 7 anti-pattern categories ECO discovered &mdash; <em>Alloc, Args, Copy, Map, Move, Sort, Vector</em>.<br>
+          <strong>Y-axis:</strong> number of historical commits found for each category (<em>log scale</em>) &mdash; <em>Sort</em> dominates with ~10<sup>5</sup>, others sit between ~10<sup>1</sup> and ~10<sup>4</sup>.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 6: Interactive pipeline -->
+  <section>
+    <h2>The 4-stage pipeline &mdash; click a stage</h2>
+    <div class="pipeline-interactive">
+    <svg viewBox="0 0 1700 420" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#4a5568"/>
+        </marker>
+      </defs>
+      <g class="stage-box active" id="stage-1" onclick="setStage(1)">
+        <rect class="stage-rect" x="20" y="40" width="380" height="240" rx="14" fill="#ebf4ff" stroke="#2c5282" stroke-width="3"/>
+        <text x="210" y="110" text-anchor="middle" font-size="48" font-weight="700" fill="#1a365d">1. Learn</text>
+        <text x="210" y="180" text-anchor="middle" font-size="26" fill="#2d3748">Mine ~55k commits</text>
+        <text x="210" y="218" text-anchor="middle" font-size="26" fill="#2d3748">into a recipe library</text>
+      </g>
+      <line x1="410" y1="160" x2="455" y2="160" stroke="#4a5568" stroke-width="4" marker-end="url(#arrow)"/>
+      <g class="stage-box dimmed" id="stage-2" onclick="setStage(2)">
+        <rect class="stage-rect" x="465" y="40" width="380" height="240" rx="14" fill="#fef3c7" stroke="#92400e" stroke-width="3"/>
+        <text x="655" y="110" text-anchor="middle" font-size="48" font-weight="700" fill="#78350f">2. Locate</text>
+        <text x="655" y="180" text-anchor="middle" font-size="26" fill="#2d3748">Profiler + embeddings</text>
+        <text x="655" y="218" text-anchor="middle" font-size="26" fill="#2d3748">pick candidate spots</text>
+      </g>
+      <line x1="855" y1="160" x2="900" y2="160" stroke="#4a5568" stroke-width="4" marker-end="url(#arrow)"/>
+      <g class="stage-box dimmed" id="stage-3" onclick="setStage(3)">
+        <rect class="stage-rect" x="910" y="40" width="380" height="240" rx="14" fill="#d1fae5" stroke="#065f46" stroke-width="3"/>
+        <text x="1100" y="110" text-anchor="middle" font-size="48" font-weight="700" fill="#064e3b">3. Generate</text>
+        <text x="1100" y="180" text-anchor="middle" font-size="26" fill="#2d3748">Fine-tuned LLM</text>
+        <text x="1100" y="218" text-anchor="middle" font-size="26" fill="#2d3748">writes the edit</text>
+      </g>
+      <line x1="1300" y1="160" x2="1345" y2="160" stroke="#4a5568" stroke-width="4" marker-end="url(#arrow)"/>
+      <g class="stage-box dimmed" id="stage-4" onclick="setStage(4)">
+        <rect class="stage-rect" x="1355" y="40" width="325" height="240" rx="14" fill="#fce7f3" stroke="#9d174d" stroke-width="3"/>
+        <text x="1517" y="110" text-anchor="middle" font-size="48" font-weight="700" fill="#831843">4. Verify</text>
+        <text x="1517" y="180" text-anchor="middle" font-size="26" fill="#2d3748">Tests, review,</text>
+        <text x="1517" y="218" text-anchor="middle" font-size="26" fill="#2d3748">monitor, auto-revert</text>
+      </g>
+      <path d="M 1517 280 Q 1517 360, 850 360 Q 210 360, 210 280"
+            stroke="#4a5568" stroke-width="3" fill="none" stroke-dasharray="10,5" marker-end="url(#arrow)"/>
+      <text x="850" y="400" text-anchor="middle" font-size="22" fill="#4a5568" font-style="italic">production telemetry feeds back as new signal</text>
+    </svg>
+    </div>
+    <p class="pipeline-hint">Click any stage above to see what happens inside &mdash; or step through 1 &rarr; 4 in order.</p>
+
+    <div class="stage-detail">
+      <div id="detail-1" class="stage-content active">
+        <h3>Stage 1 &mdash; Learn: build the recipe library</h3>
+        <ul>
+          <li>Scan <strong>~55,000 historical commits</strong> tagged as performance fixes (commit-message keywords, internal speed awards, benchmark deltas)</li>
+          <li>For each, extract the <em>before</em> code and the <em>after</em> code</li>
+          <li>Cluster similar fixes &rarr; <strong>7 anti-pattern categories</strong>: Alloc, Args, Copy, Map, Move, Sort, Vector</li>
+          <li>Each cluster becomes a <em>"recipe"</em> &mdash; a known problem plus concrete examples of how engineers actually fix it</li>
+        </ul>
+        <p class="takeaway">Key idea: ECO doesn't <em>invent</em> optimizations &mdash; it industrializes patterns engineers already use.</p>
+      </div>
+      <div id="detail-2" class="stage-content">
+        <h3>Stage 2 &mdash; Locate: find candidate spots in billions of lines</h3>
+        <ul>
+          <li>Parse every C++ function with Clang; attach <strong>fleet-profiler CPU data</strong> &rarr; filter to <strong>~10M "costly" functions</strong>
+            <ul>
+              <li><em>Clang</em> = the C++ compiler &mdash; here used to parse code into a structured tree (AST), so functions can be compared by shape, not just text</li>
+              <li><em>Fleet-profiler CPU data</em> = Google's always-on profiler that measures CPU time on real production code across the whole fleet (no extra instrumentation needed)</li>
+            </ul>
+          </li>
+          <li>Turn each function (and each anti-pattern example) into an <strong>embedding</strong> &mdash; a vector of numbers; similar code &rarr; nearby vectors</li>
+          <li>For each anti-pattern, find the <strong>top ~500 nearest functions</strong> (code-aware embeddings beat text-based ones by ~3&times;)</li>
+          <li>Re-rank with strict code-similarity metrics (control flow, types) &rarr; high-confidence shortlist</li>
+          <li>The LLM is never called blind &mdash; only on functions that are <em>hot AND look like a known anti-pattern</em></li>
+        </ul>
+        <p class="takeaway">This is the <strong>strong prior</strong> &mdash; evolution with where-to-mutate pre-selected.</p>
+      </div>
+      <div id="detail-3" class="stage-content">
+        <h3>Stage 3 &mdash; Generate: LLM writes the edit</h3>
+        <ul>
+          <li><strong>Gemini Pro 1.0</strong>, fine-tuned on the 55k historical performance commits</li>
+          <li>Four prompting strategies tested:
+            <ul>
+              <li><strong>Zero-shot</strong> &mdash; describe the task, show the code</li>
+              <li><strong>Few-shot</strong> &mdash; include 2&ndash;3 before/after examples in the prompt</li>
+              <li><strong>Chain-of-Thought</strong> &mdash; ask the model to reason step-by-step before editing</li>
+              <li><strong>ReAct</strong> &mdash; the model can take actions (read other files, iterate)</li>
+            </ul>
+          </li>
+          <li><strong>No single winner</strong> &mdash; ECO keeps a library, picks strategy per anti-pattern</li>
+        </ul>
+        <p class="takeaway">The most conventional part &mdash; same shape as the evolve papers we already know; the engineering is in matching strategy to recipe.</p>
+      </div>
+      <div id="detail-4" class="stage-content">
+        <h3>Stage 4 &mdash; Verify: gauntlet before &amp; after shipping</h3>
+        <ul>
+          <li><strong>Run existing CI tests</strong> &mdash; auto-fix simple build failures; otherwise drop the edit</li>
+          <li><strong>LLM self-review</strong> against a checklist (semantics, undefined behavior, side effects)</li>
+          <li><strong>Human code-owner review</strong> &mdash; same process as a human PR, never skipped</li>
+          <li><strong>Post-deploy monitoring</strong> &mdash; profiler watches the change in production; auto-revert on regression</li>
+          <li>Net result: <strong>&gt;99.5% success</strong>, <strong>&lt;0.5% revert rate</strong></li>
+        </ul>
+        <p class="takeaway">The part most evolve papers skip &mdash; and the reason ECO actually ships.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 7: Stage 1 deep dive — mining anti-patterns -->
+  <section>
+    <h2>Stage 1, zoomed in &mdash; how the recipe library is built</h2>
+    <div class="columns" style="align-items: center;">
+      <div style="flex: 0.9;">
+        <ul>
+          <li><strong>Multiple sources</strong>, not just commits:
+            <ul>
+              <li>Commits with perf keywords (<em>"speed up", "time/op"</em>)</li>
+              <li>Design docs and analysis docs that reference performance-improving code changes</li>
+              <li>Performance tutorials and tips (<em>curated</em> &mdash; hand-picked by engineers, not auto-scraped)</li>
+              <li>Prior large-scale refactors (<em>scripted</em> mass rewrites that touched thousands of files &mdash; pre-labeled before/after pairs at scale)</li>
+              <li>Commits flagged by analysis tools (e.g., Clang-Tidy)</li>
+            </ul>
+          </li>
+          <li><strong>Filter &amp; group:</strong> drop reverted / bad commits, cluster the rest</li>
+          <li>Output: a <strong>Performance Anti-Pattern Data Set</strong> with named categories (<code>explicit_move</code>, <code>string_view</code>, <code>vector_reserve</code>, &hellip;)</li>
+        </ul>
+      </div>
+      <div style="flex: 1.1; text-align: center;">
+        <img src="images/commit_history_diagramm.png"
+             alt="ECO's data-mining pipeline (Figure 4 from paper)"
+             style="max-width: 100%; max-height: 760px; border-radius: 6px; box-shadow: 0 2px 14px rgba(0,0,0,0.12);">
+        <p class="footnote" style="margin-top: 0.3em;">Fig. 4 from the paper &mdash; the anti-pattern data-mining pipeline</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 8: Stage 2 deep dive — Performance Opportunity Localization (interactive) -->
+  <section>
+    <h2>Stage 2, zoomed in &mdash; "Performance Opportunity Localization"</h2>
+    <p class="why" style="margin-bottom: 0.4em;">The "where in billions of lines" problem, in 3 sub-steps:</p>
+    <div class="localize-flow">
+      <div class="step active" id="locate-1" onclick="setLocate(1)">
+        <div class="step-num">1</div>
+        <h3>Parse + profile</h3>
+        <ul>
+          <li>Parse all C++ with Clang &rarr; AST per function</li>
+          <li>Attach <strong>fleet profiler</strong> CPU data</li>
+          <li>Filter to <strong>~10M "costly" functions</strong></li>
+          <li><em>Re-attribution</em> pushes cost from shared-lib calls back to <em>app code</em> &mdash; so you optimize where you can actually edit</li>
+        </ul>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="step dimmed" id="locate-2" onclick="setLocate(2)">
+        <div class="step-num">2</div>
+        <h3>Embed &amp; retrieve</h3>
+        <ul>
+          <li>Each function &rarr; vector (embedding)</li>
+          <li>For each anti-pattern, find <strong>top ~500 nearest</strong> via <code>ScaNN</code></li>
+          <li>3 embedding methods tested:
+            <ul>
+              <li>Bag-of-words</li>
+              <li>Deep text embedding</li>
+              <li><strong>Deep code embedding</strong> &mdash; winner (~3&times; better MAP@5)</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="step dimmed" id="locate-3" onclick="setLocate(3)">
+        <div class="step-num">3</div>
+        <h3>Re-rank</h3>
+        <ul>
+          <li>Composite score across:
+            <ul>
+              <li>BLEU + ROUGE-L</li>
+              <li>Type-set intersection</li>
+              <li>Control-flow similarity</li>
+            </ul>
+          </li>
+          <li>Strips variable names &amp; comments before comparing &mdash; focuses on <em>structure</em></li>
+          <li>Conservative matches preferred</li>
+        </ul>
+      </div>
+    </div>
+    <p class="chart-hint">Click any step for jargon &amp; details.</p>
+    <div class="locate-detail">
+      <div id="ldetail-1" class="locate-content active">
+        <h4>Jargon for Step 1 &mdash; Parse + profile</h4>
+        <dl>
+          <dt>AST (Abstract Syntax Tree)</dt>
+          <dd>A structured representation of code's grammar &mdash; what's a function, what's a loop, what's an assignment &mdash; stripped of variable names and whitespace. Lets you compare functions by <em>shape</em>, not just text.</dd>
+          <dt>Fleet profiler</dt>
+          <dd>Google's always-on CPU profiler that measures real production code across the whole fleet of servers. No extra instrumentation needed &mdash; the data is already being collected.</dd>
+          <dt>Costly functions</dt>
+          <dd>Functions that account for a meaningful share of production CPU. Out of all functions in the codebase, only ~10M qualify.</dd>
+          <dt>Re-attribution</dt>
+          <dd>Pushes CPU cost from generic shared-library calls (like <code>std::vector::push_back</code>) back to the <em>application code</em> that called them. So ECO works on functions you can actually optimize, not on library code shared by millions of callers.</dd>
+        </dl>
+      </div>
+      <div id="ldetail-2" class="locate-content">
+        <h4>Jargon for Step 2 &mdash; Embed &amp; retrieve</h4>
+        <dl>
+          <dt>Embedding</dt>
+          <dd>A list of numbers that represents something (here: a function). Similar code &rarr; nearby vectors. The same trick that powers semantic search.</dd>
+          <dt>ScaNN</dt>
+          <dd>Google's open-source library for fast <em>nearest-neighbor search</em> at scale. Given a query vector, it finds the closest vectors in a huge collection &mdash; way faster than comparing all pairs.</dd>
+          <dt>3 embedding methods compared</dt>
+          <dd><strong>Bag-of-words</strong>: just count tokens, ignore order. <strong>Deep text embedding</strong>: general-purpose text model. <strong>Deep code embedding</strong>: a model trained to understand code structure &mdash; wins by ~3&times;.</dd>
+          <dt>MAP@5</dt>
+          <dd><em>Mean Average Precision at 5</em>. A retrieval-quality metric: out of the top 5 results, how many are actually relevant? Higher = better.</dd>
+        </dl>
+      </div>
+      <div id="ldetail-3" class="locate-content">
+        <h4>Jargon for Step 3 &mdash; Re-rank</h4>
+        <dl>
+          <dt>BLEU</dt>
+          <dd>A text-similarity metric originally from machine translation. Measures how much the n-grams (word/token sequences) of two texts overlap. Used here to compare code structurally.</dd>
+          <dt>ROUGE-L</dt>
+          <dd>Another text-similarity metric. Focuses on the <em>longest common subsequence</em> between two texts &mdash; sensitive to the order of tokens, not just their counts.</dd>
+          <dt>Type-set intersection</dt>
+          <dd>Do the two functions use the same set of C++ types? E.g., both use <code>std::string</code> and <code>std::vector&lt;int&gt;</code>? Strong signal that they're doing similar things.</dd>
+          <dt>Control-flow similarity</dt>
+          <dd>Do the loops, branches, and returns line up between the two functions? Sensitive to the <em>shape</em> of the logic, not its surface text.</dd>
+          <dt>Why strip names &amp; comments first</dt>
+          <dd>The structural shape of the code is what matters &mdash; not the coincidental fact that one engineer named a variable <code>foo</code> and another named it <code>bar</code>.</dd>
+        </dl>
+      </div>
+    </div>
+    <p class="why" style="text-align:center; margin-top: 0.5em;">Result: a small, high-confidence shortlist per anti-pattern &rarr; sent to Stage 3 (LLM).</p>
+  </section>
+
+  <!-- Slide 9: Stage 3 deep dive — Code Edit Generation Strategies -->
+  <section>
+    <h2>Stage 3, zoomed in &mdash; "Code Edit Generation Strategies"</h2>
+    <p class="why" style="margin-bottom: 0.4em;">Fine-tuned <strong>Gemini Pro 1.0</strong> on the 55k perf commits &mdash; then tried 4 prompting strategies:</p>
+    <div class="strategy-grid">
+      <div class="strategy">
+        <h3>Zero-shot</h3>
+        <p class="strat-desc">Describe the task + show the code. No examples, no reasoning.</p>
+        <p class="strat-meta">Cheapest. Strong baseline.</p>
+      </div>
+      <div class="strategy">
+        <h3>Few-shot</h3>
+        <p class="strat-desc">Include 2&ndash;3 before/after examples in the prompt.</p>
+        <p class="strat-meta">Useful when the pattern is subtle.</p>
+      </div>
+      <div class="strategy">
+        <h3>Chain-of-Thought</h3>
+        <p class="strat-desc">Ask the model to reason step-by-step before editing.</p>
+        <p class="strat-meta">More diverse edits, higher invalid rate.</p>
+      </div>
+      <div class="strategy">
+        <h3>ReAct</h3>
+        <p class="strat-desc">Model takes actions (<code>cat</code>, <code>patch</code>), iterates.</p>
+        <p class="strat-meta">Best when context matters.</p>
+      </div>
+    </div>
+    <div class="diff" style="margin-top: 0.9em;">
+      <strong>Key finding:</strong> no single strategy wins everywhere.
+      <ul style="margin-top: 0.3em;">
+        <li>Zero-shot &amp; ReAct lead overall</li>
+        <li>Different anti-patterns prefer different strategies (Copy &harr; Zero-shot; Vector &harr; ReAct)</li>
+        <li><strong>ECO keeps a library of strategies</strong> and picks per recipe</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 10: Stage 4 deep dive — Verification, Submission & Monitoring -->
+  <section>
+    <h2>Stage 4, zoomed in &mdash; "Verification, Submission &amp; Monitoring"</h2>
+    <p class="why" style="margin-bottom: 0.4em;">Four layers an edit must pass &mdash; each catches a different kind of failure:</p>
+    <div class="localize-flow">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>CI tests</h3>
+        <ul>
+          <li>Run the file's existing unit + integration tests</li>
+          <li>Auto-fix simple build failures (missing includes, small syntax)</li>
+          <li>Drops if tests still fail</li>
+        </ul>
+        <p class="catches">Catches: functional regressions</p>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>LLM self-review</h3>
+        <ul>
+          <li>Model inspects its own edit against a checklist</li>
+          <li>"Changed semantics? UB? Side effects removed?"</li>
+        </ul>
+        <p class="catches">Catches: subtle semantic bugs</p>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Human review</h3>
+        <ul>
+          <li>Standard Google code review</li>
+          <li>Code-owner is the human responsible for the file</li>
+          <li><strong>Never skipped</strong></li>
+        </ul>
+        <p class="catches">Catches: design / intent issues</p>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h3>Post-deploy monitor</h3>
+        <ul>
+          <li>Profiler keeps watching after merge</li>
+          <li>Auto-revert on perf regression or weird behavior</li>
+        </ul>
+        <p class="catches">Catches: production-only failures</p>
+      </div>
+    </div>
+    <div class="diff" style="margin-top: 0.8em;">
+      <strong>Net result:</strong> <strong>&gt;99.5%</strong> production success, <strong>&lt;0.5%</strong> revert rate.<br>
+      <em>4 imperfect filters that catch different things &nbsp;&gt;&nbsp; 1 strong filter.</em>
+    </div>
+  </section>
+
+  <!-- Slide 11: Results (interactive) -->
+  <section>
+    <h2>Results &mdash; a year in production</h2>
+    <div class="stats" style="margin: 0.1em 0 0.3em;">
+      <div class="stat"><div class="num">6,400+</div><div class="lbl">commits landed</div></div>
+      <div class="stat"><div class="num">~25k</div><div class="lbl">lines of code</div></div>
+      <div class="stat"><div class="num">&gt;99.5%</div><div class="lbl">success rate</div></div>
+      <div class="stat"><div class="num">2M+</div><div class="lbl">cores saved (NC)</div></div>
+      <div class="stat"><div class="num">~500k</div><div class="lbl">NC / quarter</div></div>
+    </div>
+    <div class="results-charts-interactive">
+      <div class="chart-card active" id="chart-1" onclick="setChart(1)">
+        <div class="chart-label">Edits per anti-pattern (Fig. 14a)</div>
+        <img src="images/(a)%20Submitted%20code%20edits.png" alt="Submitted edits by anti-pattern">
+      </div>
+      <div class="chart-card dimmed" id="chart-2" onclick="setChart(2)">
+        <div class="chart-label">Compute savings per anti-pattern (Fig. 14b)</div>
+        <img src="images/(b)%20Performance%20savings%20across%20the%20fleet..png" alt="Compute savings by anti-pattern">
+      </div>
+      <div class="chart-card dimmed" id="chart-3" onclick="setChart(3)">
+        <div class="chart-label">Landed edits over time, 1 year (Fig. 15)</div>
+        <img src="images/Landed%20code%20edits%20in%20production%20over%20time.png" alt="Edits over time">
+      </div>
+    </div>
+    <p class="chart-hint">Click any chart to see what it's telling us.</p>
+    <div class="chart-detail">
+      <div id="cdetail-1" class="chart-content active">
+        <h3>Edits per anti-pattern &mdash; Figure 14a</h3>
+        <ul>
+          <li><strong>Blue bars:</strong> number of ECO commits submitted per anti-pattern (log scale)</li>
+          <li><strong>Orange bars:</strong> lines of code touched per anti-pattern</li>
+          <li><em>Copy</em> and <em>Vector</em> dominate volume (~10&sup3; commits each) &mdash; simple, locally-scoped edits that are easy to verify</li>
+          <li><em>Map</em> is much lower &mdash; those edits are more complex (e.g. removing an unnecessary map operation requires more reasoning), so fewer get through</li>
+        </ul>
+      </div>
+      <div id="cdetail-2" class="chart-content">
+        <h3>Compute savings per anti-pattern &mdash; Figure 14b</h3>
+        <ul>
+          <li>Same x-axis (7 categories); y-axis is now <strong>normalized cores saved</strong>, log scale</li>
+          <li><em>Vector</em> edits = short but very high impact &mdash; pre-allocating one container avoids a stream of downstream allocations</li>
+          <li><em>Map</em> has fewer commits but still meaningful savings &mdash; complexity buys more compute per edit</li>
+          <li><strong>Volume of edits ≠ savings.</strong> You have to look at both charts together to see the trade-off.</li>
+        </ul>
+      </div>
+      <div id="cdetail-3" class="chart-content">
+        <h3>Landed edits over time, 1 year &mdash; Figure 15</h3>
+        <ul>
+          <li><strong>Blue:</strong> total lines touched (cumulative). <strong>Yellow:</strong> modified. <strong>Green:</strong> added. <strong>Red:</strong> deleted.</li>
+          <li>Modifications dominate &mdash; most ECO edits are tweaks to existing code, not rewrites</li>
+          <li>Trend is upward with no sign of plateau &mdash; sustained system, not a one-time push</li>
+          <li>Room to keep growing as the anti-pattern catalog expands and LLM capabilities improve</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 12: Open question -->
+  <section class="center">
+    <h2>Open question for the room</h2>
+    <p style="font-size: 1.2em; margin: 1em 2em; line-height: 1.5;">
+      ECO works because Google has a <strong>fleet profiler</strong> &mdash; a fitness signal from reality.
+    </p>
+    <p style="font-size: 1.2em; margin: 1em 2em; line-height: 1.5;">
+      As we shift from <em>evolve</em> &rarr; <em>discovery</em>:<br>
+      <strong>what's the discovery analogue of production telemetry?</strong>
+    </p>
+    <p class="why" style="font-size: 0.9em; margin-top: 1.5em;">Real-world signals? Synthetic surrogates? Something else?</p>
+  </section>
+
+  <!-- Slide 13: Q&A -->
+  <section class="center">
+    <h1>Q&amp;A</h1>
+    <p class="subtitle" style="margin-top: 1.2em;">Three things worth remembering:</p>
+    <ul style="display:inline-block; text-align:left; margin-top: 0.6em; font-size: 1em;">
+      <li>Evolution works better with a <em>strong prior</em> (Stage 2)</li>
+      <li>Production needs a <em>layered verification loop</em> (Stage 4)</li>
+      <li>Real production telemetry is a powerful fitness signal</li>
+    </ul>
+    <p class="footnote" style="margin-top: 2em;">Paper: arXiv:2503.15669 &mdash; Hannah Lin et al., Google, 2025</p>
+  </section>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/highlight.js"></script>
+<script>
+  function setStage(n) {
+    for (let i = 1; i <= 4; i++) {
+      const box = document.getElementById('stage-' + i);
+      const detail = document.getElementById('detail-' + i);
+      if (box) {
+        box.classList.toggle('active', i === n);
+        box.classList.toggle('dimmed', i !== n);
+      }
+      if (detail) {
+        detail.classList.toggle('active', i === n);
+      }
+    }
+  }
+
+  function setChart(n) {
+    for (let i = 1; i <= 3; i++) {
+      const card = document.getElementById('chart-' + i);
+      const detail = document.getElementById('cdetail-' + i);
+      if (card) {
+        card.classList.toggle('active', i === n);
+        card.classList.toggle('dimmed', i !== n);
+      }
+      if (detail) {
+        detail.classList.toggle('active', i === n);
+      }
+    }
+  }
+
+  function setLocate(n) {
+    for (let i = 1; i <= 3; i++) {
+      const step = document.getElementById('locate-' + i);
+      const detail = document.getElementById('ldetail-' + i);
+      if (step) {
+        step.classList.toggle('active', i === n);
+        step.classList.toggle('dimmed', i !== n);
+      }
+      if (detail) {
+        detail.classList.toggle('active', i === n);
+      }
+    }
+  }
+
+  Reveal.initialize({
+    width: 1920,
+    height: 1080,
+    margin: 0.06,
+    hash: true,
+    history: true,
+    transition: 'slide',
+    slideNumber: 'c/t',
+    plugins: [RevealHighlight]
+  });
+
+  // Reset interactive slides to first item when entered
+  Reveal.on('slidechanged', evt => {
+    if (evt.currentSlide && evt.currentSlide.querySelector('.pipeline-interactive')) {
+      setStage(1);
+    }
+    if (evt.currentSlide && evt.currentSlide.querySelector('.results-charts-interactive')) {
+      setChart(1);
+    }
+    if (evt.currentSlide && evt.currentSlide.querySelector('.locate-detail')) {
+      setLocate(1);
+    }
+  });
+</script>
+</body>
+</html>
