@@ -218,7 +218,9 @@
 >
 > Then use **ScaNN** — Google's open-source nearest-neighbor search library — to find, for each anti-pattern, the top ~500 functions whose embeddings are closest. ScaNN is the magic that makes this fast enough at scale; comparing all pairs by brute force would be hopeless.
 >
-> The paper tested three embedding methods. Bag-of-words just counts tokens — fast and dumb. Deep text embeddings use a general-purpose text model. Deep code embeddings use a model trained specifically on code structure — and it wins by about three times on **MAP@5** (Mean Average Precision at 5; basically: out of the top 5 retrieved results, how many were actually relevant). Code-aware understanding matters.
+> The paper tested three embedding methods. Bag-of-words just counts tokens — fast and dumb, scores **~0.07** on MAP@5. Deep text embeddings use a general-purpose text model — about **0.10**. Deep code embeddings, trained on code structure, hit **~0.20** — about three times the bag-of-words baseline. And there's a clever refinement: using code *diffs* (the before/after change itself) as the query instead of just the function body bumps MAP@5 all the way to **~0.54**. Code-aware understanding matters, and how you frame the query matters even more.
+>
+> **MAP@5** if you haven't seen it: Mean Average Precision at 5 — out of the top 5 retrieved results, how many were actually relevant? Higher is better.
 
 ### Click Step 3 — Re-rank
 
@@ -259,7 +261,9 @@
 >
 > **ReAct** — the most powerful. The model can take actions: read other files with `cat`, apply patches, iterate. This is best when context matters — when the right fix depends on what's happening elsewhere in the codebase.
 >
-> Key finding from the paper: **no single strategy wins everywhere**. Zero-shot and ReAct lead overall on the similarity-to-human-fix metric. But specific anti-patterns prefer specific strategies. Copy edits do well with zero-shot. Vector edits often need ReAct. So ECO doesn't pick one; it maintains a *library* of strategies and matches each anti-pattern recipe to the strategy that works best for it.
+> Key finding from the paper: **no single strategy wins everywhere**. Zero-shot and ReAct lead overall. Specific anti-patterns prefer specific strategies: Copy edits do well with zero-shot; Vector edits often need ReAct. So ECO doesn't pick one; it maintains a *library* of strategies and matches each anti-pattern recipe to the strategy that works best for it.
+>
+> The paper backs this up with a held-out evaluation worth mentioning: they took **48 real performance-improving Google commits** that the model had never seen, asked each prompting strategy to reproduce the human's fix, and had reviewers score the LLM's output against the human's on a 0-to-1 quality scale. Zero-shot scored about **0.53**, ReAct about **0.51**, Chain-of-Thought trailed at **0.34**. That's the empirical evidence behind the "no single winner" claim — and a useful credibility signal: the LLM is reproducing roughly half the quality of a human expert's fix on real production code.
 >
 > This is the part of the system that maps most directly onto the evolve papers you already know — same shape, more careful per-recipe tuning.
 
@@ -319,6 +323,8 @@
 > First chart — edits per anti-pattern. Each bar group is one of the seven anti-pattern categories from earlier. The **blue bars** are the number of ECO commits submitted for that category. The **orange bars** are the lines of code touched.
 >
 > Notice the volume distribution: *Copy* and *Vector* dominate, around ten thousand commits each. *Map* is much lower, around a few hundred. Why? Because Copy and Vector fixes are simple and locally scoped — adding a `const&` or a `vector.reserve()` is a small, predictable edit. Map fixes are more complex; removing an unnecessary map lookup often requires understanding more of the surrounding code. So fewer Map edits get through the verification gauntlet, but each one is more involved.
+>
+> One more data point worth landing while we're per-pattern. The paper also ran **microbenchmarks** on hand-written tests for each category, measuring per-call speedup. Copy edits give about **1.26×**. Map edits about **1.07×**. Vector edits about **1.35×** — the highest, because pre-allocating a container avoids a stream of allocations downstream. None of these are dramatic on their own. But when you multiply those modest per-call speedups by the volume of commits and the scale of the fleet, you get the two-million-NC-per-year number we saw at the top.
 
 ### Click Chart 2 — Compute savings per anti-pattern (Fig. 14b)
 

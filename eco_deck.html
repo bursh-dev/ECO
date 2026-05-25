@@ -554,7 +554,7 @@ for x in data:
           <dt>3 embedding methods compared</dt>
           <dd><strong>Bag-of-words</strong>: just count tokens, ignore order. <strong>Deep text embedding</strong>: general-purpose text model. <strong>Deep code embedding</strong>: a model trained to understand code structure &mdash; wins by ~3&times;.</dd>
           <dt>MAP@5</dt>
-          <dd><em>Mean Average Precision at 5</em>. A retrieval-quality metric: out of the top 5 results, how many are actually relevant? Higher = better.</dd>
+          <dd><em>Mean Average Precision at 5</em>. A retrieval-quality metric: out of the top 5 results, how many are relevant? Higher = better. <strong>Paper's numbers:</strong> deep code embedding ≈ <strong>0.20</strong>, deep text ≈ 0.10, bag-of-words ≈ <strong>0.07</strong>. Using <em>code diffs</em> as queries (a refinement) bumps MAP@5 to <strong>0.54</strong>.</dd>
         </dl>
       </div>
       <div id="ldetail-3" class="locate-content">
@@ -605,7 +605,7 @@ for x in data:
     <div class="diff" style="margin-top: 0.9em;">
       <strong>Key finding:</strong> no single strategy wins everywhere.
       <ul style="margin-top: 0.3em;">
-        <li>Zero-shot &amp; ReAct lead overall</li>
+        <li>Zero-shot &amp; ReAct lead overall &mdash; on a <strong>held-out test of 48 real Google commits</strong>, both score ~<strong>0.5 / 1.0</strong> on human quality reviews (CoT trails at ~0.34)</li>
         <li>Different anti-patterns prefer different strategies (Copy &harr; Zero-shot; Vector &harr; ReAct)</li>
         <li><strong>ECO keeps a library of strategies</strong> and picks per recipe</li>
       </ul>
@@ -698,6 +698,7 @@ for x in data:
           <li><strong>Orange bars:</strong> lines of code touched per anti-pattern</li>
           <li><em>Copy</em> and <em>Vector</em> dominate volume (~10&sup3; commits each) &mdash; simple, locally-scoped edits that are easy to verify</li>
           <li><em>Map</em> is much lower &mdash; those edits are more complex (e.g. removing an unnecessary map operation requires more reasoning), so fewer get through</li>
+          <li><strong>Per-call microbenchmark speedups:</strong> Copy <strong>1.26&times;</strong> &middot; Map <strong>1.07&times;</strong> &middot; Vector <strong>1.35&times;</strong> &mdash; modest per call, but multiplied across volume = the 2M+ NC saved</li>
         </ul>
       </div>
       <div id="cdetail-2" class="chart-content">
