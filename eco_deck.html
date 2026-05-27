@@ -293,7 +293,7 @@
         <ul>
           <li>Moore's Law has slowed &mdash; no more "free" hardware speedups</li>
           <li>At Google scale, even a <strong>1% gain</strong> = a small data center's worth of compute</li>
-          <li>The bottleneck: too much code, too few engineers to hand-optimize</li>
+          <li>The bottleneck: too much <span class="ast-trigger" onclick="showModal('monorepo-modal')">code</span>, too few engineers to hand-optimize</li>
           <li>What exists today (compilers, Clang-Tidy / lint-style heuristics) leaves a lot on the table
             <ul>
               <li><em>Clang-Tidy is basically the C++ analogue of <code>pylint</code> / <code>ruff</code> in our world</em></li>
@@ -307,6 +307,22 @@
              style="max-width: 100%; max-height: 560px; border-radius: 6px; box-shadow: 0 2px 14px rgba(0,0,0,0.12);">
         <p class="footnote" style="margin-top: 0.4em;">Transistor count per chip, 1970&ndash;2020</p>
       </div>
+    </div>
+
+    <div class="info-modal" id="monorepo-modal">
+      <button class="close-btn" onclick="hideAllModals()">&times; close</button>
+      <h3>Google's codebase &mdash; a single monorepo called <em>Piper</em></h3>
+      <p style="font-size: 0.75em;">~95% of all Google code lives in one repository. Some numbers (from the 2016 ACM paper <em>"Why Google Stores Billions of Lines of Code in a Single Repository"</em>; current figures are bigger):</p>
+      <div class="stats" style="margin: 0.4em 0;">
+        <div class="stat"><div class="num" style="font-size: 1.4em;">~2B</div><div class="lbl">lines of code</div></div>
+        <div class="stat"><div class="num" style="font-size: 1.4em;">~86 TB</div><div class="lbl">total repo size</div></div>
+        <div class="stat"><div class="num" style="font-size: 1.4em;">~9M</div><div class="lbl">source files</div></div>
+        <div class="stat"><div class="num" style="font-size: 1.4em;">~45k</div><div class="lbl">commits / workday</div></div>
+        <div class="stat"><div class="num" style="font-size: 1.4em;">~30k</div><div class="lbl">engineers using it</div></div>
+      </div>
+      <p style="font-size: 0.7em;">Built on a <strong>custom distributed version-control system</strong> (not git &mdash; git couldn't handle this scale at the time). Build system: <strong>Blaze</strong> internally; the open-source descendant is <strong>Bazel</strong>.</p>
+      <p style="font-size: 0.7em; margin-top: 0.4em;"><strong>What's NOT in Piper:</strong> Android, Chrome / Chromium, a handful of open-source projects developed externally. Everything else &mdash; Search, Gmail, Maps, Ads, infra &mdash; lives here.</p>
+      <p style="margin-top: 0.6em; padding: 0.6em 0.8em; background: #fffbeb; border-left: 4px solid #f59e0b;"><strong>Why this matters for ECO:</strong> the monorepo is foundational. ECO's "scan all C++ functions in the codebase" only works because <em>all the C++ functions are in one place</em>, with one build system, one code-review pipeline, and one consistent set of code-owners. Without a monorepo, the same approach would require integrating across dozens of separate repos with different conventions.</p>
     </div>
   </section>
 
@@ -411,10 +427,49 @@ for x in data:
         <img src="images/Anti-Pattern%20Categories.png"
              alt="Anti-pattern categories ECO mined from history">
         <p class="footnote" style="margin-top: 0.5em; text-align: left; max-width: 95%;">
-          <strong>X-axis:</strong> the 7 anti-pattern categories ECO discovered &mdash; <em>Alloc, Args, Copy, Map, Move, Sort, Vector</em>.<br>
+          <strong>X-axis:</strong> the 7 anti-pattern categories ECO discovered &mdash; <em>Alloc, Args, Copy, Map, <span class="ast-trigger" onclick="showModal('move-modal')">Move</span>, Sort, <span class="ast-trigger" onclick="showModal('vector-modal')">Vector</span></em>. <small style="color: #718096; font-style: italic;">(Move &amp; Vector clickable)</small><br>
           <strong>Y-axis:</strong> number of historical commits found for each category (<em>log scale</em>) &mdash; <em>Sort</em> dominates with ~<strong>100,000</strong> commits, others sit between ~<strong>10</strong> and ~<strong>10,000</strong>.
         </p>
       </div>
+    </div>
+
+    <div class="info-modal" id="move-modal">
+      <button class="close-btn" onclick="hideAllModals()">&times; close</button>
+      <h3>"Move" anti-pattern &mdash; transfer ownership instead of copying</h3>
+      <p><strong>What it is in C++:</strong></p>
+      <p style="font-size: 0.75em; line-height: 1.45;">C++ has <em>move semantics</em>: instead of <strong>copying</strong> a big object (which allocates new memory and duplicates contents), you can <strong>move</strong> it &mdash; transfer ownership of the underlying memory to a new variable without copying. The original is left in a "moved-from" state and the new variable just inherits the existing memory.</p>
+      <p><strong>The anti-pattern:</strong> writing code that <em>copies</em> when it could <em>move</em> &mdash; especially for large objects like strings, vectors, maps that own heap memory.</p>
+<pre><code data-trim class="language-cpp">// Before — copies the whole string
+std::string s = build_huge_string();
+process(s);  // s passed by value → full copy made
+
+// After — moves it, no copy
+std::string s = build_huge_string();
+process(std::move(s));  // ownership transferred, no allocation</code></pre>
+      <p style="margin-top: 0.6em; padding: 0.5em 0.8em; background: #fffbeb; border-left: 4px solid #f59e0b;"><strong>Python analogue:</strong> Python doesn't have explicit move semantics. Variables in Python are references to objects, so assignment <em>never copies</em> by default (which is why Python doesn't have this category of bug). The closest analogue: dropping unnecessary <code>copy.deepcopy()</code> / <code>list(x)</code> / <code>dict(x)</code> calls when you don't actually need an independent copy.</p>
+    </div>
+
+    <div class="info-modal" id="vector-modal">
+      <button class="close-btn" onclick="hideAllModals()">&times; close</button>
+      <h3>"Vector" anti-pattern &mdash; pre-size your container</h3>
+      <p><strong>What <code>std::vector</code> is in C++:</strong></p>
+      <p style="font-size: 0.75em; line-height: 1.45;">A resizable array container &mdash; basically the C++ equivalent of a <strong>Python <code>list</code></strong>. Grows by doubling its underlying memory block; every doubling triggers an <strong>allocation + bulk copy</strong> of all existing elements.</p>
+      <p><strong>The anti-pattern:</strong> building up a vector with <code>push_back</code> in a loop <em>without</em> telling it the size first. Triggers a cascade of reallocations.</p>
+<pre><code data-trim class="language-cpp">// Before — ~14 reallocations + ~10k cumulative copies
+std::vector&lt;int&gt; results;
+for (int i = 0; i &lt; 10000; i++)
+  results.push_back(compute(i));
+
+// After — one-line fix: pre-allocate
+std::vector&lt;int&gt; results;
+results.reserve(10000);  // ← entire fix
+for (int i = 0; i &lt; 10000; i++)
+  results.push_back(compute(i));</code></pre>
+      <p style="margin-top: 0.6em; padding: 0.5em 0.8em; background: #fffbeb; border-left: 4px solid #f59e0b;"><strong>Python analogues:</strong></p>
+      <ul style="font-size: 0.7em; line-height: 1.4; margin: 0.2em 0 0 1.2em;">
+        <li><strong>List comprehensions</strong> over <code>.append()</code> loops &mdash; tighter and often pre-sized internally</li>
+        <li><strong>NumPy:</strong> use <code>np.empty(n)</code> + index assignment instead of <code>np.append</code> in a loop &mdash; NumPy's <code>append</code> reallocates <em>every time</em>, which is much worse than Python lists or C++ vectors</li>
+      </ul>
     </div>
   </section>
 
@@ -736,9 +791,43 @@ Build a ScaNN index over those 10M vectors.</div>
     <div class="diff" style="margin-top: 0.9em;">
       <strong>Key finding:</strong> no single strategy wins everywhere.
       <ul style="margin-top: 0.3em;">
-        <li>Zero-shot &amp; ReAct lead overall &mdash; on a <strong>held-out test of 48 real Google commits</strong>, both score ~<strong>0.5 / 1.0</strong> on human quality reviews (CoT trails at ~0.34)</li>
+        <li><span class="ast-trigger" onclick="showModal('eval-modal')">Zero-shot &amp; ReAct lead overall &mdash; on a <strong>held-out test of 48 real Google commits</strong>, both score ~<strong>0.5 / 1.0</strong> on human quality reviews (CoT trails at ~0.34)</span> <small style="font-weight: normal; color: #718096; font-style: italic;">(click for details)</small></li>
         <li>Different anti-patterns prefer different strategies (Copy &harr; Zero-shot; Vector &harr; ReAct)</li>
         <li><strong>ECO keeps a library of strategies</strong> and picks per recipe</li>
+      </ul>
+    </div>
+
+    <div class="info-modal" id="eval-modal">
+      <button class="close-btn" onclick="hideAllModals()">&times; close</button>
+      <h3>How the 4 prompting strategies were evaluated</h3>
+      <p style="margin-top: 0.6em;">The paper ran an <strong>evaluation experiment</strong> to find out which of the 4 prompting strategies works best. Result: two of them tie for first, one trails badly.</p>
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.7em; margin-top: 0.4em;">
+        <thead>
+          <tr style="background: #f7fafc;">
+            <th style="padding: 0.4em 0.6em; text-align: left; border-bottom: 2px solid #cbd5e0;">Strategy</th>
+            <th style="padding: 0.4em 0.6em; text-align: left; border-bottom: 2px solid #cbd5e0;">Score</th>
+            <th style="padding: 0.4em 0.6em; text-align: left; border-bottom: 2px solid #cbd5e0;">Verdict</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="padding: 0.3em 0.6em; border-bottom: 1px solid #e2e8f0;"><strong>Zero-shot</strong></td><td style="padding: 0.3em 0.6em; border-bottom: 1px solid #e2e8f0;">~0.51</td><td style="padding: 0.3em 0.6em; border-bottom: 1px solid #e2e8f0;">Tied for best</td></tr>
+          <tr><td style="padding: 0.3em 0.6em; border-bottom: 1px solid #e2e8f0;"><strong>ReAct</strong></td><td style="padding: 0.3em 0.6em; border-bottom: 1px solid #e2e8f0;">~0.51</td><td style="padding: 0.3em 0.6em; border-bottom: 1px solid #e2e8f0;">Tied for best</td></tr>
+          <tr><td style="padding: 0.3em 0.6em; border-bottom: 1px solid #e2e8f0;">Few-shot</td><td style="padding: 0.3em 0.6em; border-bottom: 1px solid #e2e8f0;">(middle)</td><td style="padding: 0.3em 0.6em; border-bottom: 1px solid #e2e8f0;">Solid</td></tr>
+          <tr><td style="padding: 0.3em 0.6em;"><strong>Chain-of-Thought</strong></td><td style="padding: 0.3em 0.6em;">~0.34</td><td style="padding: 0.3em 0.6em;">Notably worse</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top: 0.8em;"><strong>How they tested:</strong></p>
+      <p style="font-size: 0.7em;"><em>"Held-out test of 48 real Google commits"</em> means:</p>
+      <ul style="font-size: 0.7em; line-height: 1.4; margin: 0.2em 0 0.5em 1.2em;">
+        <li>Took <strong>48 actual</strong> performance-improving commits from Google's codebase</li>
+        <li>Each one has the <strong>original slow code</strong> (before) and the <strong>engineer's fix</strong> (after)</li>
+        <li>The model was <strong>never shown these 48 during training</strong> &mdash; that's what "held-out" means</li>
+      </ul>
+      <p style="font-size: 0.7em;">For each commit: give the LLM the "before" code, ask it to produce a fix, then compare the LLM's fix against the human's.</p>
+      <p style="font-size: 0.7em; margin-top: 0.5em;"><strong>"Human quality reviews"</strong> = a person (likely a Google engineer) read both versions and scored the LLM's output on a <strong>0&ndash;1 scale</strong>:</p>
+      <ul style="font-size: 0.7em; line-height: 1.4; margin: 0.2em 0 0 1.2em;">
+        <li><strong>0</strong> = bad / wrong / nonsense</li>
+        <li><strong>1</strong> = matches the human's fix in quality (or better)</li>
       </ul>
     </div>
   </section>
@@ -806,6 +895,7 @@ Build a ScaNN index over those 10M vectors.</div>
       <div class="stat"><div class="num">2M+</div><div class="lbl">cores saved (NC)</div></div>
       <div class="stat"><div class="num">~500k</div><div class="lbl">NC / quarter</div></div>
     </div>
+    <p class="footnote" style="text-align: center; margin: 0.1em 0 0.3em; font-style: italic;"><strong>NC</strong> = <em>normalized cores</em> &mdash; the equivalent number of standard CPU cores worth of compute saved (Google's way of comparing compute across different machine types).</p>
     <div class="results-charts-interactive">
       <div class="chart-card active" id="chart-1" onclick="setChart(1)">
         <div class="chart-label">Edits per anti-pattern (Fig. 14a)</div>
