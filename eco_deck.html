@@ -160,9 +160,75 @@
 .reveal .locate-detail .locate-content { display: none; }
 .reveal .locate-detail .locate-content.active { display: block; }
 .reveal .locate-detail .locate-content h4 { color: #1a365d; font-size: 0.9em; margin: 0 0 0.4em; }
-.reveal .locate-detail .locate-content dl { font-size: 0.65em; margin: 0; line-height: 1.4; }
-.reveal .locate-detail .locate-content dt { font-weight: 700; color: #2b6cb0; margin-top: 0.4em; }
-.reveal .locate-detail .locate-content dd { margin: 0.1em 0 0 1.2em; color: #2d3748; }
+.reveal .locate-detail .locate-content dl { font-size: 0.65em; margin: 0; line-height: 1.3; }
+.reveal .locate-detail .locate-content dt { font-weight: 700; color: #2b6cb0; margin-top: 0.3em; }
+.reveal .locate-detail .locate-content dd { margin: 0.05em 0 0 1.2em; color: #2d3748; }
+
+/* Clickable AST term + popup modal on slide 8 */
+.reveal .ast-trigger {
+  cursor: pointer;
+  color: #2b6cb0;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: #a0aec0;
+}
+.reveal .ast-trigger:hover { color: #1a365d; text-decoration-color: #1a365d; }
+
+.reveal .modal-backdrop {
+  display: none;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  z-index: 999;
+}
+.reveal .modal-backdrop.active { display: block; }
+
+.reveal .info-modal {
+  display: none;
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border: 3px solid #2b6cb0;
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  padding: 1.4em 1.8em;
+  max-width: 70%;
+  max-height: 85%;
+  overflow: auto;
+  z-index: 1000;
+}
+.reveal .info-modal.active { display: block; }
+.reveal .info-modal h3 { margin: 0 0 0.4em; color: #1a365d; font-size: 1.1em; }
+.reveal .info-modal p { font-size: 0.7em; margin: 0.6em 0 0.3em; color: #2d3748; }
+.reveal .info-modal pre { font-size: 0.55em; width: auto; margin: 0.2em 0; box-shadow: none; }
+.reveal .info-modal pre code { padding: 0.7em 1em; }
+.reveal .info-modal .ast-tree {
+  font-family: 'Consolas', 'Monaco', monospace;
+  background: #f7fafc;
+  padding: 0.8em 1em;
+  border-radius: 6px;
+  border-left: 4px solid #2b6cb0;
+  font-size: 0.6em;
+  line-height: 1.4;
+  white-space: pre;
+  color: #2d3748;
+  overflow-x: auto;
+}
+.reveal .info-modal .close-btn {
+  position: absolute;
+  top: 0.4em;
+  right: 0.7em;
+  cursor: pointer;
+  font-size: 0.55em;
+  color: #718096;
+  background: white;
+  border: 1px solid #cbd5e0;
+  padding: 0.3em 0.7em;
+  border-radius: 4px;
+}
+.reveal .info-modal .close-btn:hover { background: #e2e8f0; color: #2d3748; }
 
 /* Big stat numbers */
 .reveal .stats { display: flex; justify-content: space-around; margin-top: 1.2em; gap: 1.5em; }
@@ -215,7 +281,7 @@
   <section class="center title-slide">
     <h1>ECO</h1>
     <p class="subtitle">An LLM-Driven Efficient Code Optimizer<br>for Warehouse-Scale Computers</p>
-    <p class="subtitle"><em>Hannah Lin et al. &mdash; Google, 2025</em></p>
+    <p class="subtitle"><em>Hannah Lin et al. &mdash; Google &middot; March 19, 2025</em></p>
     <p class="author">Paper club presentation</p>
   </section>
 
@@ -346,79 +412,92 @@ for x in data:
              alt="Anti-pattern categories ECO mined from history">
         <p class="footnote" style="margin-top: 0.5em; text-align: left; max-width: 95%;">
           <strong>X-axis:</strong> the 7 anti-pattern categories ECO discovered &mdash; <em>Alloc, Args, Copy, Map, Move, Sort, Vector</em>.<br>
-          <strong>Y-axis:</strong> number of historical commits found for each category (<em>log scale</em>) &mdash; <em>Sort</em> dominates with ~10<sup>5</sup>, others sit between ~10<sup>1</sup> and ~10<sup>4</sup>.
+          <strong>Y-axis:</strong> number of historical commits found for each category (<em>log scale</em>) &mdash; <em>Sort</em> dominates with ~<strong>100,000</strong> commits, others sit between ~<strong>10</strong> and ~<strong>10,000</strong>.
         </p>
       </div>
     </div>
   </section>
 
-  <!-- Slide 6: Interactive pipeline -->
+  <!-- Slide 6: Stage 1 — Learn (offline / one-time) -->
   <section>
-    <h2>The 4-stage pipeline &mdash; click a stage</h2>
+    <h2>Stage 1 &mdash; Learn: build the recipe library <span style="font-size: 0.55em; color: #718096; font-weight: normal;">(offline / one-time)</span></h2>
+    <div class="columns" style="align-items: center;">
+      <div style="flex: 0.9;">
+        <ul>
+          <li><strong>Multiple sources</strong>, not just commits:
+            <ul>
+              <li>Commits with perf keywords (<em>"speed up", "time/op"</em>)</li>
+              <li>Design docs and analysis docs that reference performance-improving code changes</li>
+              <li>Performance tutorials and tips (<em>curated</em> &mdash; hand-picked by engineers, not auto-scraped)</li>
+              <li>Prior large-scale refactors (<em>scripted</em> mass rewrites that touched thousands of files &mdash; pre-labeled before/after pairs at scale)</li>
+              <li>Commits flagged by analysis tools (e.g., Clang-Tidy)</li>
+            </ul>
+          </li>
+          <li><strong>Filter &amp; group:</strong> drop reverted / bad commits, cluster the rest</li>
+          <li>Output: a <strong>Performance Anti-Pattern Data Set</strong> with named categories (<code>explicit_move</code>, <code>string_view</code>, <code>vector_reserve</code>, &hellip;)</li>
+        </ul>
+      </div>
+      <div style="flex: 1.1; text-align: center;">
+        <p class="why" style="margin: 0 0 0.5em; text-align: left;">Runs <strong>once / offline</strong> &mdash; feeds the online loop on the next slide. ECO doesn't <em>invent</em> optimizations &mdash; it industrializes patterns engineers already use.</p>
+        <img src="images/commit_history_diagramm.png"
+             alt="ECO's data-mining pipeline (Figure 4 from paper)"
+             style="max-width: 100%; max-height: 580px; border-radius: 6px; box-shadow: 0 2px 14px rgba(0,0,0,0.12);">
+        <p class="footnote" style="margin-top: 0.3em;">Fig. 4 from the paper &mdash; the anti-pattern data-mining pipeline</p>
+        <p class="footnote" style="margin-top: 0.3em; font-style: italic;">~55,000 from initial keyword mining &rarr; ~88,000 across all 7 categories after the other sources are folded in.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 7: Online loop — Locate, Generate, Verify (interactive) -->
+  <section>
+    <h2>The online loop &mdash; Locate, Generate, Verify <span style="font-size: 0.55em; color: #718096; font-weight: normal;">(runs continuously)</span></h2>
     <div class="pipeline-interactive">
-    <svg viewBox="0 0 1700 420" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 1700 440" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="#4a5568"/>
         </marker>
       </defs>
-      <g class="stage-box active" id="stage-1" onclick="setStage(1)">
-        <rect class="stage-rect" x="20" y="40" width="380" height="240" rx="14" fill="#ebf4ff" stroke="#2c5282" stroke-width="3"/>
-        <text x="210" y="110" text-anchor="middle" font-size="48" font-weight="700" fill="#1a365d">1. Learn</text>
-        <text x="210" y="180" text-anchor="middle" font-size="26" fill="#2d3748">Mine ~55k commits</text>
-        <text x="210" y="218" text-anchor="middle" font-size="26" fill="#2d3748">into a recipe library</text>
+      <g class="stage-box active" id="stage-2" onclick="setStage(2)">
+        <rect class="stage-rect" x="40" y="40" width="480" height="240" rx="14" fill="#fef3c7" stroke="#92400e" stroke-width="3"/>
+        <text x="280" y="115" text-anchor="middle" font-size="50" font-weight="700" fill="#78350f">2. Locate</text>
+        <text x="280" y="185" text-anchor="middle" font-size="28" fill="#2d3748">Profiler + embeddings</text>
+        <text x="280" y="223" text-anchor="middle" font-size="28" fill="#2d3748">pick candidate spots</text>
       </g>
-      <line x1="410" y1="160" x2="455" y2="160" stroke="#4a5568" stroke-width="4" marker-end="url(#arrow)"/>
-      <g class="stage-box dimmed" id="stage-2" onclick="setStage(2)">
-        <rect class="stage-rect" x="465" y="40" width="380" height="240" rx="14" fill="#fef3c7" stroke="#92400e" stroke-width="3"/>
-        <text x="655" y="110" text-anchor="middle" font-size="48" font-weight="700" fill="#78350f">2. Locate</text>
-        <text x="655" y="180" text-anchor="middle" font-size="26" fill="#2d3748">Profiler + embeddings</text>
-        <text x="655" y="218" text-anchor="middle" font-size="26" fill="#2d3748">pick candidate spots</text>
-      </g>
-      <line x1="855" y1="160" x2="900" y2="160" stroke="#4a5568" stroke-width="4" marker-end="url(#arrow)"/>
+      <line x1="535" y1="160" x2="595" y2="160" stroke="#4a5568" stroke-width="4" marker-end="url(#arrow2)"/>
       <g class="stage-box dimmed" id="stage-3" onclick="setStage(3)">
-        <rect class="stage-rect" x="910" y="40" width="380" height="240" rx="14" fill="#d1fae5" stroke="#065f46" stroke-width="3"/>
-        <text x="1100" y="110" text-anchor="middle" font-size="48" font-weight="700" fill="#064e3b">3. Generate</text>
-        <text x="1100" y="180" text-anchor="middle" font-size="26" fill="#2d3748">Fine-tuned LLM</text>
-        <text x="1100" y="218" text-anchor="middle" font-size="26" fill="#2d3748">writes the edit</text>
+        <rect class="stage-rect" x="600" y="40" width="480" height="240" rx="14" fill="#d1fae5" stroke="#065f46" stroke-width="3"/>
+        <text x="840" y="115" text-anchor="middle" font-size="50" font-weight="700" fill="#064e3b">3. Generate</text>
+        <text x="840" y="185" text-anchor="middle" font-size="28" fill="#2d3748">Fine-tuned LLM</text>
+        <text x="840" y="223" text-anchor="middle" font-size="28" fill="#2d3748">writes the edit</text>
       </g>
-      <line x1="1300" y1="160" x2="1345" y2="160" stroke="#4a5568" stroke-width="4" marker-end="url(#arrow)"/>
+      <line x1="1095" y1="160" x2="1155" y2="160" stroke="#4a5568" stroke-width="4" marker-end="url(#arrow2)"/>
       <g class="stage-box dimmed" id="stage-4" onclick="setStage(4)">
-        <rect class="stage-rect" x="1355" y="40" width="325" height="240" rx="14" fill="#fce7f3" stroke="#9d174d" stroke-width="3"/>
-        <text x="1517" y="110" text-anchor="middle" font-size="48" font-weight="700" fill="#831843">4. Verify</text>
-        <text x="1517" y="180" text-anchor="middle" font-size="26" fill="#2d3748">Tests, review,</text>
-        <text x="1517" y="218" text-anchor="middle" font-size="26" fill="#2d3748">monitor, auto-revert</text>
+        <rect class="stage-rect" x="1160" y="40" width="500" height="240" rx="14" fill="#fce7f3" stroke="#9d174d" stroke-width="3"/>
+        <text x="1410" y="115" text-anchor="middle" font-size="50" font-weight="700" fill="#831843">4. Verify</text>
+        <text x="1410" y="185" text-anchor="middle" font-size="28" fill="#2d3748">Tests, review,</text>
+        <text x="1410" y="223" text-anchor="middle" font-size="28" fill="#2d3748">monitor, auto-revert</text>
       </g>
-      <path d="M 1517 280 Q 1517 360, 850 360 Q 210 360, 210 280"
-            stroke="#4a5568" stroke-width="3" fill="none" stroke-dasharray="10,5" marker-end="url(#arrow)"/>
-      <text x="850" y="400" text-anchor="middle" font-size="22" fill="#4a5568" font-style="italic">production telemetry feeds back as new signal</text>
+      <path d="M 1410 280 Q 1410 380, 845 380 Q 280 380, 280 280"
+            stroke="#4a5568" stroke-width="3" fill="none" stroke-dasharray="10,5" marker-end="url(#arrow2)"/>
+      <text x="845" y="420" text-anchor="middle" font-size="24" fill="#4a5568" font-style="italic">production telemetry feeds back into Locate</text>
     </svg>
     </div>
-    <p class="pipeline-hint">Click any stage above to see what happens inside &mdash; or step through 1 &rarr; 4 in order.</p>
+    <p class="pipeline-hint">Click any stage above to see what happens inside.</p>
 
     <div class="stage-detail">
-      <div id="detail-1" class="stage-content active">
-        <h3>Stage 1 &mdash; Learn: build the recipe library</h3>
-        <ul>
-          <li>Scan <strong>~55,000 historical commits</strong> tagged as performance fixes (commit-message keywords, internal speed awards, benchmark deltas)</li>
-          <li>For each, extract the <em>before</em> code and the <em>after</em> code</li>
-          <li>Cluster similar fixes &rarr; <strong>7 anti-pattern categories</strong>: Alloc, Args, Copy, Map, Move, Sort, Vector</li>
-          <li>Each cluster becomes a <em>"recipe"</em> &mdash; a known problem plus concrete examples of how engineers actually fix it</li>
-        </ul>
-        <p class="takeaway">Key idea: ECO doesn't <em>invent</em> optimizations &mdash; it industrializes patterns engineers already use.</p>
-      </div>
-      <div id="detail-2" class="stage-content">
+      <div id="detail-2" class="stage-content active">
         <h3>Stage 2 &mdash; Locate: find candidate spots in billions of lines</h3>
         <ul>
           <li>Parse every C++ function with Clang; attach <strong>fleet-profiler CPU data</strong> &rarr; filter to <strong>~10M "costly" functions</strong>
             <ul>
               <li><em>Clang</em> = the C++ compiler &mdash; here used to parse code into a structured tree (AST), so functions can be compared by shape, not just text</li>
-              <li><em>Fleet-profiler CPU data</em> = Google's always-on profiler that measures CPU time on real production code across the whole fleet (no extra instrumentation needed)</li>
+              <li><em>Fleet-profiler CPU data</em> = Google's always-on profiler &mdash; <strong>Google-Wide Profiling (GWP)</strong> &mdash; that samples CPU time on real production code across the whole fleet (no extra instrumentation needed)</li>
             </ul>
           </li>
           <li>Turn each function (and each anti-pattern example) into an <strong>embedding</strong> &mdash; a vector of numbers; similar code &rarr; nearby vectors</li>
           <li>For each anti-pattern, find the <strong>top ~500 nearest functions</strong> (code-aware embeddings beat text-based ones by ~3&times;)</li>
-          <li>Re-rank with strict code-similarity metrics (control flow, types) &rarr; high-confidence shortlist</li>
+          <li>Re-rank with strict code-similarity metrics &rarr; a smaller, high-confidence shortlist per anti-pattern <em>(paper doesn't give the exact cutoff)</em></li>
           <li>The LLM is never called blind &mdash; only on functions that are <em>hot AND look like a known anti-pattern</em></li>
         </ul>
         <p class="takeaway">This is the <strong>strong prior</strong> &mdash; evolution with where-to-mutate pre-selected.</p>
@@ -453,34 +532,6 @@ for x in data:
     </div>
   </section>
 
-  <!-- Slide 7: Stage 1 deep dive — mining anti-patterns -->
-  <section>
-    <h2>Stage 1, zoomed in &mdash; how the recipe library is built</h2>
-    <div class="columns" style="align-items: center;">
-      <div style="flex: 0.9;">
-        <ul>
-          <li><strong>Multiple sources</strong>, not just commits:
-            <ul>
-              <li>Commits with perf keywords (<em>"speed up", "time/op"</em>)</li>
-              <li>Design docs and analysis docs that reference performance-improving code changes</li>
-              <li>Performance tutorials and tips (<em>curated</em> &mdash; hand-picked by engineers, not auto-scraped)</li>
-              <li>Prior large-scale refactors (<em>scripted</em> mass rewrites that touched thousands of files &mdash; pre-labeled before/after pairs at scale)</li>
-              <li>Commits flagged by analysis tools (e.g., Clang-Tidy)</li>
-            </ul>
-          </li>
-          <li><strong>Filter &amp; group:</strong> drop reverted / bad commits, cluster the rest</li>
-          <li>Output: a <strong>Performance Anti-Pattern Data Set</strong> with named categories (<code>explicit_move</code>, <code>string_view</code>, <code>vector_reserve</code>, &hellip;)</li>
-        </ul>
-      </div>
-      <div style="flex: 1.1; text-align: center;">
-        <img src="images/commit_history_diagramm.png"
-             alt="ECO's data-mining pipeline (Figure 4 from paper)"
-             style="max-width: 100%; max-height: 760px; border-radius: 6px; box-shadow: 0 2px 14px rgba(0,0,0,0.12);">
-        <p class="footnote" style="margin-top: 0.3em;">Fig. 4 from the paper &mdash; the anti-pattern data-mining pipeline</p>
-      </div>
-    </div>
-  </section>
-
   <!-- Slide 8: Stage 2 deep dive — Performance Opportunity Localization (interactive) -->
   <section>
     <h2>Stage 2, zoomed in &mdash; "Performance Opportunity Localization"</h2>
@@ -505,11 +556,12 @@ for x in data:
           <li>For each anti-pattern, find <strong>top ~500 nearest</strong> via <code>ScaNN</code></li>
           <li>3 embedding methods tested:
             <ul>
-              <li>Bag-of-words</li>
-              <li>Deep text embedding</li>
+              <li>Bag-of-words (count tokens, ignore order)</li>
+              <li>Deep text embedding (general-purpose text model)</li>
               <li><strong>Deep code embedding</strong> &mdash; winner (~3&times; better MAP@5)</li>
             </ul>
           </li>
+          <li><strong>Sharper query:</strong> match on the <em>before&rarr;after diff</em>, not just the anti-pattern shape &rarr; MAP@5 jumps from <strong>0.20</strong> to <strong>0.54</strong></li>
         </ul>
       </div>
       <div class="arrow">&rarr;</div>
@@ -534,46 +586,125 @@ for x in data:
       <div id="ldetail-1" class="locate-content active">
         <h4>Jargon for Step 1 &mdash; Parse + profile</h4>
         <dl>
-          <dt>AST (Abstract Syntax Tree)</dt>
-          <dd>A structured representation of code's grammar &mdash; what's a function, what's a loop, what's an assignment &mdash; stripped of variable names and whitespace. Lets you compare functions by <em>shape</em>, not just text.</dd>
-          <dt>Fleet profiler</dt>
-          <dd>Google's always-on CPU profiler that measures real production code across the whole fleet of servers. No extra instrumentation needed &mdash; the data is already being collected.</dd>
+          <dt><span class="ast-trigger" onclick="showModal('ast-modal')">AST (Abstract Syntax Tree)</span> <small style="font-weight: normal; color: #718096; font-style: italic;">(click for example)</small></dt>
+          <dd>Code parsed into a tree &mdash; functions, loops, assignments &mdash; stripped of names and whitespace. Compare by <em>shape</em>, not text.</dd>
+          <dt><span class="ast-trigger" onclick="showModal('gwp-modal')">Fleet profiler &mdash; aka <em>Google-Wide Profiling (GWP)</em></span> <small style="font-weight: normal; color: #718096; font-style: italic;">(click for details)</small></dt>
+          <dd>Google's always-on CPU profiler across all production servers. Samples real workloads continuously; the data is already collected, ECO just reuses it.</dd>
           <dt>Costly functions</dt>
-          <dd>Functions that account for a meaningful share of production CPU. Out of all functions in the codebase, only ~10M qualify.</dd>
+          <dd>Functions that account for a meaningful share of production CPU. ~10M qualify out of the whole codebase.</dd>
           <dt>Re-attribution</dt>
-          <dd>Pushes CPU cost from generic shared-library calls (like <code>std::vector::push_back</code>) back to the <em>application code</em> that called them. So ECO works on functions you can actually optimize, not on library code shared by millions of callers.</dd>
+          <dd>Pushes CPU cost from shared-lib calls (like <code>std::vector::push_back</code>) back to the <em>app code</em> that called them &mdash; so you optimize where you can actually edit.</dd>
         </dl>
       </div>
       <div id="ldetail-2" class="locate-content">
         <h4>Jargon for Step 2 &mdash; Embed &amp; retrieve</h4>
         <dl>
-          <dt>Embedding</dt>
-          <dd>A list of numbers that represents something (here: a function). Similar code &rarr; nearby vectors. The same trick that powers semantic search.</dd>
-          <dt>ScaNN</dt>
-          <dd>Google's open-source library for fast <em>nearest-neighbor search</em> at scale. Given a query vector, it finds the closest vectors in a huge collection &mdash; way faster than comparing all pairs.</dd>
-          <dt>3 embedding methods compared</dt>
-          <dd><strong>Bag-of-words</strong>: just count tokens, ignore order. <strong>Deep text embedding</strong>: general-purpose text model. <strong>Deep code embedding</strong>: a model trained to understand code structure &mdash; wins by ~3&times;.</dd>
-          <dt>MAP@5</dt>
-          <dd><em>Mean Average Precision at 5</em>. A retrieval-quality metric: out of the top 5 results, how many are relevant? Higher = better. <strong>Paper's numbers:</strong> deep code embedding ≈ <strong>0.20</strong>, deep text ≈ 0.10, bag-of-words ≈ <strong>0.07</strong>. Using <em>code diffs</em> as queries (a refinement) bumps MAP@5 to <strong>0.54</strong>.</dd>
+          <dt><span class="ast-trigger" onclick="showModal('scann-modal')">Embedding + ScaNN</span> <small style="font-weight: normal; color: #718096; font-style: italic;">(click for details)</small></dt>
+          <dd><strong>Embedding</strong> = a list of numbers representing a function; similar code &rarr; nearby vectors (same trick as semantic search). <strong>ScaNN</strong> = Google's open-source library for fast nearest-neighbor search at scale &mdash; finds the closest vectors without comparing every pair.</dd>
+          <dt>Deep code embedding (the winner)</dt>
+          <dd>A <strong>1B-param dual-encoder</strong> (Google-internal, name not disclosed) &mdash; fine-tuned on <strong>~25M code pairs</strong> (similar-function pairs + diff/before pairs).</dd>
+          <dt><span class="ast-trigger" onclick="showModal('map-modal')">MAP@5</span> <small style="font-weight: normal; color: #718096; font-style: italic;">(click for analogy: top 500 vs. top 5)</small></dt>
+          <dd><em>Mean Average Precision at 5</em>. Retrieval-quality metric: out of the top 5 results, how many are relevant <em>and</em> well-ranked? Higher = better. <strong>Paper's numbers:</strong> bag-of-words <strong>0.07</strong>, deep text 0.10, deep code <strong>0.20</strong>, deep code + diff queries <strong>0.54</strong>.</dd>
         </dl>
       </div>
       <div id="ldetail-3" class="locate-content">
         <h4>Jargon for Step 3 &mdash; Re-rank</h4>
         <dl>
-          <dt>BLEU</dt>
-          <dd>A text-similarity metric originally from machine translation. Measures how much the n-grams (word/token sequences) of two texts overlap. Used here to compare code structurally.</dd>
-          <dt>ROUGE-L</dt>
-          <dd>Another text-similarity metric. Focuses on the <em>longest common subsequence</em> between two texts &mdash; sensitive to the order of tokens, not just their counts.</dd>
+          <dt>BLEU &amp; ROUGE-L</dt>
+          <dd>Text-similarity metrics from machine translation. <strong>BLEU</strong> = n-gram (token-sequence) overlap. <strong>ROUGE-L</strong> = longest common subsequence (sensitive to order). Used here on code.</dd>
           <dt>Type-set intersection</dt>
-          <dd>Do the two functions use the same set of C++ types? E.g., both use <code>std::string</code> and <code>std::vector&lt;int&gt;</code>? Strong signal that they're doing similar things.</dd>
+          <dd>Do the two functions use the same C++ types (e.g. both use <code>std::string</code> and <code>std::vector&lt;int&gt;</code>)? Strong signal they're doing similar things.</dd>
           <dt>Control-flow similarity</dt>
           <dd>Do the loops, branches, and returns line up between the two functions? Sensitive to the <em>shape</em> of the logic, not its surface text.</dd>
           <dt>Why strip names &amp; comments first</dt>
-          <dd>The structural shape of the code is what matters &mdash; not the coincidental fact that one engineer named a variable <code>foo</code> and another named it <code>bar</code>.</dd>
+          <dd>Focus on structural shape, not coincidental naming (one engineer's <code>foo</code> is another's <code>bar</code>).</dd>
         </dl>
       </div>
     </div>
     <p class="why" style="text-align:center; margin-top: 0.5em;">Result: a small, high-confidence shortlist per anti-pattern &rarr; sent to Stage 3 (LLM).</p>
+
+    <!-- Jargon popups -->
+    <div class="modal-backdrop" id="modal-backdrop" onclick="hideAllModals()"></div>
+    <div class="info-modal" id="ast-modal">
+      <button class="close-btn" onclick="hideAllModals()">&times; close</button>
+      <h3>AST example &mdash; Python</h3>
+      <p><strong>Python source code:</strong></p>
+<pre><code data-trim class="language-python">def add(a, b):
+    return a + b</code></pre>
+      <p><strong>Its AST (the structured tree) looks like this:</strong></p>
+      <div class="ast-tree">Module
+└── FunctionDef  name='add'
+    ├── args
+    │   ├── arg  name='a'
+    │   └── arg  name='b'
+    └── body
+        └── Return
+            └── BinOp
+                ├── left:  Name id='a'
+                ├── op:    Add
+                └── right: Name id='b'</div>
+      <p style="margin-top: 0.6em;"><em>Each node is a grammatical construct. Names and whitespace are stripped &mdash; what matters is the <strong>shape</strong>. Two functions with different names but the same shape have identical ASTs.</em></p>
+    </div>
+
+    <div class="info-modal" id="gwp-modal">
+      <button class="close-btn" onclick="hideAllModals()">&times; close</button>
+      <h3>Google-Wide Profiling (GWP)</h3>
+      <p><strong>What it is:</strong></p>
+      <ul style="font-size: 0.7em; line-height: 1.4; margin: 0.2em 0 0.5em 1.2em;">
+        <li>Always-on CPU profiler running on <strong>every Google production server</strong> (since ~2010)</li>
+        <li>Statistical sampling &mdash; periodic ~10ms snapshots of each process's CPU activity, no manual instrumentation needed</li>
+        <li>Centrally aggregates samples into a fleet-wide view: <em>"function <code>foo()</code> consumed 2.4% of service X's CPU this week"</em></li>
+        <li>Originally a 2010 Google Research paper; gave us the open-source <code>pprof</code> profile format</li>
+      </ul>
+      <p><strong>Open-source equivalents you can play with:</strong></p>
+      <ul style="font-size: 0.7em; line-height: 1.4; margin: 0.2em 0 0.5em 1.2em;">
+        <li><code>py-spy</code> &mdash; sampling profiler for a single Python process</li>
+        <li><strong>Pyroscope</strong> &mdash; open-source <em>continuous</em> profiler for many services (closest analogue)</li>
+        <li>Datadog Continuous Profiler, Grafana Pyroscope, Polar Signals &mdash; commercial SaaS versions</li>
+      </ul>
+      <p><strong>How ECO uses it (twice):</strong></p>
+      <ul style="font-size: 0.7em; line-height: 1.4; margin: 0.2em 0 0 1.2em;">
+        <li><strong>Stage 2 (Locate):</strong> "which functions are worth optimizing?" &mdash; the hot ones</li>
+        <li><strong>Stage 4 (Verify):</strong> "did our edit actually make things faster in production?" &mdash; auto-revert if not</li>
+      </ul>
+    </div>
+
+    <div class="info-modal" id="scann-modal">
+      <button class="close-btn" onclick="hideAllModals()">&times; close</button>
+      <h3>How ECO uses Embedding + ScaNN together</h3>
+      <p><strong>Once (offline, when the codebase is scanned):</strong></p>
+      <div class="ast-tree">For each of 10M functions in the codebase:
+    embed it &rarr; vector
+
+Build a ScaNN index over those 10M vectors.</div>
+      <p style="margin-top: 0.7em;"><strong>Continuously (online):</strong></p>
+      <div class="ast-tree">For each of the 7 anti-patterns:
+    For each example of the pattern (the "before" code):
+        embed it &rarr; query vector
+        scann.search(query, top_k=500)   &larr; finds 500 similar functions in ms
+        send those 500 to the re-ranking step</div>
+      <p style="margin-top: 0.6em;"><em>That's the whole Embed + ScaNN machinery in eight conceptual lines.</em></p>
+      <p style="margin-top: 0.8em; padding: 0.6em 0.8em; background: #fffbeb; border-left: 4px solid #f59e0b; font-style: italic;"><strong>In one sentence:</strong> Embedding = how to turn code into numbers so "similar code" becomes "nearby vectors." ScaNN = how to find the nearest neighbors among millions of vectors fast enough to do this continuously across Google's fleet.</p>
+    </div>
+
+    <div class="info-modal" id="map-modal">
+      <button class="close-btn" onclick="hideAllModals()">&times; close</button>
+      <h3>MAP@5 &mdash; why "5" when production uses "500"?</h3>
+      <p style="margin-top: 0.6em; padding: 0.8em 1em; background: #f7fafc; border-left: 4px solid #2b6cb0; font-size: 0.85em;">
+        Think of it like <strong>restaurant reviews</strong>. A restaurant serves <strong>500 dishes a day</strong>, but a critic only orders <strong>5 items</strong> to evaluate the menu. The critic's score isn't saying <em>"only 5 dishes are good"</em> &mdash; it's saying <em>"the top of the menu represents what you'd actually order most often, so let's check whether that is any good."</em>
+      </p>
+      <p style="margin-top: 0.7em;"><strong>Same idea here:</strong></p>
+      <ul style="font-size: 0.7em; line-height: 1.4; margin: 0.2em 0 0.5em 1.2em;">
+        <li><strong>Top 500</strong> = how many candidates ECO's production system actually keeps and sends downstream.</li>
+        <li><strong>MAP@5</strong> = how the team <em>evaluates</em> whether the ranking is any good &mdash; by inspecting just the very top.</li>
+      </ul>
+      <p><strong>Why measure at 5, not 500?</strong></p>
+      <ul style="font-size: 0.7em; line-height: 1.4; margin: 0.2em 0 0 1.2em;">
+        <li>The <strong>top of the ranking</strong> matters most. If the top 5 is garbage, the broader ranking is probably bad too.</li>
+        <li>Small K (like 5) is <strong>more sensitive</strong> to ranking-quality differences. MAP@500 would average out into mush.</li>
+        <li>It's the <strong>standard convention</strong> in information retrieval &mdash; you'll see MAP@5 / @10 / @100 throughout the literature.</li>
+      </ul>
+    </div>
   </section>
 
   <!-- Slide 9: Stage 3 deep dive — Code Edit Generation Strategies -->
@@ -726,7 +857,7 @@ for x in data:
   <section class="center">
     <h2>Open question for the room</h2>
     <p style="font-size: 1.2em; margin: 1em 2em; line-height: 1.5;">
-      ECO works because Google has a <strong>fleet profiler</strong> &mdash; a fitness signal from reality.
+      ECO works because Google has a <strong>fleet profiler (Google-Wide Profiling / GWP)</strong> &mdash; a fitness signal from reality.
     </p>
     <p style="font-size: 1.2em; margin: 1em 2em; line-height: 1.5;">
       As we shift from <em>evolve</em> &rarr; <em>discovery</em>:<br>
@@ -795,6 +926,18 @@ for x in data:
     }
   }
 
+  function showModal(id) {
+    const m = document.getElementById(id);
+    const b = document.getElementById('modal-backdrop');
+    if (m) m.classList.add('active');
+    if (b) b.classList.add('active');
+  }
+  function hideAllModals() {
+    document.querySelectorAll('.info-modal').forEach(m => m.classList.remove('active'));
+    const b = document.getElementById('modal-backdrop');
+    if (b) b.classList.remove('active');
+  }
+
   Reveal.initialize({
     width: 1920,
     height: 1080,
@@ -809,7 +952,7 @@ for x in data:
   // Reset interactive slides to first item when entered
   Reveal.on('slidechanged', evt => {
     if (evt.currentSlide && evt.currentSlide.querySelector('.pipeline-interactive')) {
-      setStage(1);
+      setStage(2);
     }
     if (evt.currentSlide && evt.currentSlide.querySelector('.results-charts-interactive')) {
       setChart(1);
@@ -817,6 +960,7 @@ for x in data:
     if (evt.currentSlide && evt.currentSlide.querySelector('.locate-detail')) {
       setLocate(1);
     }
+    hideAllModals(); // close any open modal when changing slides
   });
 </script>
 </body>

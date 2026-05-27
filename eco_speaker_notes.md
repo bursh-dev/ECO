@@ -105,21 +105,38 @@
 
 ---
 
-## Slide 6 — The 4-stage pipeline (interactive — all on one slide)
+## Slide 6 — Stage 1 (Learn): build the recipe library (offline, once)
 
-**On screen:** A pipeline diagram at the top with four clickable stage boxes (1. Learn → 2. Locate → 3. Generate → 4. Verify). Below it, a detail panel that shows the content of whichever stage is active. **Default on entry: Stage 1 highlighted, its detail visible.**
-
-**How to drive it:** Click each stage box in order. The active stage gets a glowing yellow border; the others dim. Don't use arrow keys mid-slide (they advance the deck) — click only. Leaving and returning to the slide resets to Stage 1.
-
-**Say (overview, before clicking anything):**
-> This is the whole system on one slide. Four stages, in order — Learn, Locate, Generate, Verify — connected as a loop because the production telemetry from the last stage feeds back as a signal for the next round. I'll click into each box and we'll spend a couple of minutes on what's inside.
-
-### Click Stage 1 — Learn
+**On screen:** Two-column layout. **Left:** bullets on the multiple sources ECO mines and what comes out. **Right:** Figure 4 from the paper showing the data-mining pipeline. A header callout flags that this stage runs offline / one-time.
 
 **Say:**
-> Stage one — Learn. The whole point is: *don't invent optimizations, mine them.* Google has decades of commit history, and many commits are explicitly tagged as performance improvements — either in the commit message, by winning an internal speed award, or by having attached benchmark deltas. ECO scans roughly fifty-five thousand of these. For each one, it pulls out the *before* code and the *after* code. Then it clusters the similar ones together using unsupervised methods. That gives the seven anti-pattern categories we just saw: Alloc, Args, Copy, Map, Move, Sort, and Vector.
+> Important framing first: ECO has **two timescales**. Stage 1 — what's on this slide — runs **once / offline**. It's the data-prep step. Stages 2 through 4 (next slide) run **continuously**, using the output of Stage 1 as a static input.
 >
-> Each cluster becomes a "recipe" — a known problem plus concrete examples of how engineers actually fix it. So at the end of Stage 1, ECO has a library of seven recipes, each grounded in real human work.
+> So this slide is about how the *recipe library* got built in the first place. ECO doesn't only mine commits — it pulls from a few different sources and combines them.
+>
+> Source one: historical commits flagged by keyword search. Words like *"time/op," "speed up," "speeds up,"* or specific phrases like *"replace std::string& with absl::string_view"* or *"avoid copies."*
+>
+> Source two: design docs and analysis documents. Inside Google, when someone writes an internal doc describing a performance optimization, that doc usually references the commits that did it. ECO follows those references in reverse — find the doc, find the commits it points to.
+>
+> Source three: curated tutorials and tips engineers have written. Prior large-scale refactors that touched many files. Commits flagged by static-analysis tools like Clang-Tidy.
+>
+> All those candidate commits then go through a filter step: remove anything that got reverted, anything that wasn't actually a performance fix, anything where the before-and-after doesn't tell a clean story. Then group what's left into named categories — you can see some of them on the right: `explicit_move`, `string_view`, `suboptimal_map_or_set`, `vector_reserve`, and so on.
+>
+> Net result: the **Performance Anti-Pattern Data Set** — the recipe library that the rest of ECO depends on. Worth noting for our team: this is **bootstrapped from Google's own engineering history**. A Python team would have to do this exercise for itself, and the categories would look completely different.
+
+**Transition:**
+> Now the *live* system — the three stages that actually run continuously.
+
+---
+
+## Slide 7 — The online loop: Locate → Generate → Verify (interactive)
+
+**On screen:** Three clickable stage boxes in a row (Locate → Generate → Verify) with a feedback arrow looping from Verify back to **Locate** (not Learn — that's offline). Below: a detail panel that updates when you click a stage. **Default on entry:** Stage 2 (Locate) active.
+
+**How to drive it:** Click each stage in order (2 → 3 → 4). Active stage glows yellow, others dim. The dashed feedback arrow at the bottom is important: after a change ships, the fleet profiler measures whether it actually helped — and that measurement becomes the **next signal for Stage 2** (where to look next). The feedback does *not* go to Stage 1, because Stage 1 is offline / static.
+
+**Say (overview, before clicking):**
+> This is the **live system** — three stages running continuously across Google's production fleet. Locate finds candidates. Generate writes edits. Verify ships them safely. The dashed arrow at the bottom is the feedback loop: post-deploy telemetry from Stage 4 feeds back into Stage 2 to inform the next round of "what should we optimize?" The recipe library from Stage 1 is taken as a static input — it doesn't change in this loop.
 
 ### Click Stage 2 — Locate
 
@@ -128,13 +145,13 @@
 >
 > The question is: given the seven recipes, *where in billions of lines of code should we apply them?* They use two signals together.
 >
-> First signal: the fleet profiler. Google runs a continuously-on CPU profiler across all production code — it's already there, collecting telemetry. ECO reuses that to filter all functions down to roughly *ten million costly ones*. The rest aren't worth touching.
+> First signal: the fleet profiler — Google's internal name for it is **Google-Wide Profiling**, or **GWP**. It's an always-on, fleet-wide CPU profiler that samples real production code 24/7 and has been running internally for years. The data is already there for any other purpose; ECO just reuses it to filter all functions down to roughly *ten million costly ones*. The rest aren't worth touching.
 >
-> Second signal: embeddings. Each function gets turned into a vector of numbers — a compact representation that captures its structure. The seven anti-patterns get the same treatment. Then for each anti-pattern, find the ~500 nearest function-vectors. Code-aware embeddings work about three times better than text-based ones — which makes sense, because two functions can look similar character-by-character and behave totally differently.
+> Second signal: embeddings. Each function gets turned into a vector of numbers. The seven anti-patterns get the same treatment. Then for each anti-pattern, find the ~500 nearest function-vectors. Code-aware embeddings work about three times better than text-based ones.
 >
 > Then re-rank those 500 with stricter code-similarity metrics — control flow, types, structure — to get a high-confidence shortlist.
 >
-> The result: the LLM is never called blind on a random function. It only ever sees candidates the system already has good reason to think are fixable. That's the "strong prior" — and it's the first big differentiator we'll come back to.
+> The result: the LLM is never called blind on a random function. It only ever sees candidates the system already has good reason to think are fixable. That's the **strong prior** that makes ECO work.
 
 ### Click Stage 3 — Generate
 
@@ -143,49 +160,27 @@
 >
 > They take Gemini Pro 1.0 and fine-tune it on those fifty-five thousand historical commits. So the model has *seen* what good performance edits look like in Google's own codebase before it ever writes a new one.
 >
-> They try four prompting strategies. Zero-shot: just describe the task and show the code. Few-shot: include two or three before/after examples in the prompt. Chain-of-thought: ask the model to reason step-by-step before producing the edit. ReAct: let the model take actions — read other files, call simple tools, iterate.
+> They try four prompting strategies. Zero-shot: just describe the task and show the code. Few-shot: include two or three before/after examples in the prompt. Chain-of-thought: ask the model to reason step-by-step. ReAct: let the model take actions — read other files, call simple tools, iterate.
 >
-> The finding: no single strategy wins everywhere. Zero-shot and ReAct lead overall, but specific anti-patterns favor specific strategies. So ECO doesn't pick one; it keeps a *library* and matches strategy to anti-pattern. This is the part you'll recognize from prior papers — the engineering is in the matching, not the LLM itself.
+> The finding: no single strategy wins everywhere. Zero-shot and ReAct lead overall, but specific anti-patterns favor specific strategies. So ECO doesn't pick one; it keeps a *library* and matches strategy to anti-pattern.
 
 ### Click Stage 4 — Verify
 
 **Say:**
-> Stage four — Verify. This is what makes ECO actually shippable, and it's where most evolve research stops.
+> Stage four — Verify. This is what makes ECO actually shippable, and where most evolve research stops.
 >
-> Four layers, in order. *Layer one*: run the existing CI tests on the edited code. If the build breaks, ECO tries to auto-fix simple stuff — missing includes, small syntax fixups. If tests fail, the edit gets dropped.
+> Four layers, in order. *Layer one*: run the existing CI tests on the edited code. If the build breaks, ECO tries to auto-fix simple stuff. If tests fail, the edit is dropped.
 >
-> *Layer two*: LLM self-review. The same model — or a checker model — is shown the edit and asked, against a checklist: "Did you change the semantics? Could this introduce undefined behavior? Did you accidentally remove a side effect?" Catches a meaningful chunk of subtle bugs that pass tests but would still be wrong.
+> *Layer two*: LLM self-review. The model is shown its own edit and asked against a checklist: "Did you change the semantics? Could this introduce undefined behavior? Did you accidentally remove a side effect?" Catches subtle bugs that pass tests but would still be wrong.
 >
-> *Layer three*: human code-owner review. The edit goes through Google's normal code review process — the human who owns the file reviews it, accepts or rejects. No bypass. ECO is treated like any other contributor.
+> *Layer three*: human code-owner review. The edit goes through Google's normal code review process. No bypass.
 >
-> *Layer four*: post-deploy monitoring. After the commit lands and runs in production, the profiler keeps watching. If performance actually regressed, or behavior is weird, auto-revert.
+> *Layer four*: post-deploy monitoring. After the commit lands and runs in production, the profiler keeps watching. If performance actually regressed, auto-revert. **That's the loop's feedback signal** — the same telemetry that says "this worked" is what tells Stage 2 where to look next.
 >
-> Net result: production success rate over ninety-nine and a half percent, revert rate under half a percent. This is what makes the system real instead of a research prototype — and it's our second differentiator.
+> Net result: production success rate over ninety-nine and a half percent, revert rate under half a percent.
 
-**Transition (after all four):**
-> Now that you've seen the four stages, let's pull back and ask the question I promised: what makes ECO *different* from a typical evolve paper? Three things — that's the next few slides.
-
----
-
-## Slide 7 — Stage 1 zoomed in: how the recipe library is built
-
-**On screen:** Two-column layout. **Left:** bullets on the sources ECO mines and what comes out the other end. **Right:** the data-mining pipeline diagram from the paper (Figure 4) showing the flow from raw sources → filter/group → named anti-pattern categories.
-
-**Say:**
-> Quick zoom-in on Stage 1, because there's more to it than I let on in the interactive view. ECO doesn't only mine commits — it pulls from a few different sources and combines them.
->
-> Source one is the obvious one: historical commits flagged by keyword search. Words like *"time/op," "speed up," "speeds up,"* or specific phrases like *"replace std::string& with absl::string_view"* or *"avoid copies."*
->
-> Source two: design docs and analysis documents. Inside Google, when someone writes an internal doc describing a performance optimization, that doc usually references the commits that did it. So ECO follows those references in reverse — find the doc, find the commits it points to.
->
-> Source three: curated sources. Performance tips and tutorials engineers have written. Prior large-scale refactors that touched many files. Commits flagged by static-analysis tools like Clang-Tidy.
->
-> All those candidate commits then go through a filter step: remove anything that got reverted, anything that wasn't actually a performance fix, anything where the before-and-after doesn't tell a clean story. Then group what's left into named categories — you can see some of them on the right: `explicit_move`, `string_view`, `suboptimal_map_or_set`, `vector_reserve`, and so on. There's also an "other/unclassified" bucket — the catch-all.
->
-> Net result: a Performance Anti-Pattern Data Set — the recipe library that the rest of ECO depends on. Worth noting for our team: this is **bootstrapped from the company's own engineering history**. A Python team would have to do this exercise for itself, and the categories would look completely different.
-
-**Transition:**
-> Next stage: how does ECO find places in the codebase where those recipes apply?
+**Transition (after all three):**
+> Each stage has more detail than I can fit in this overview. The next few slides zoom into Stage 2, 3, and 4 specifically.
 
 ---
 
@@ -205,7 +200,7 @@
 >
 > Take every C++ function and parse it with Clang to get an **AST** — Abstract Syntax Tree — basically a structured tree representation of the code's grammar, stripped of variable names and whitespace. That lets us compare functions by their *shape* rather than their text.
 >
-> Then attach CPU usage data from Google's **fleet profiler** — that's their always-on, fleet-wide CPU measurement system. The data is already being collected; ECO just reuses it. Filter down to about ten million "costly" functions — everything else isn't worth bothering with.
+> Then attach CPU usage data from Google's **fleet profiler** — internally called **Google-Wide Profiling (GWP)**. It's their always-on, fleet-wide CPU sampling system; the data is already being collected for other purposes, ECO just reuses it. Filter down to about ten million "costly" functions — everything else isn't worth bothering with.
 >
 > One clever detail: **re-attribution.** Generic library functions like `std::vector::push_back` get a ton of CPU time on the profiler, but you can't really optimize them in isolation — they're called from a million places. Re-attribution pushes that CPU cost back to the *application code* that called the library. So ECO ends up working on functions where edits are actually meaningful.
 
