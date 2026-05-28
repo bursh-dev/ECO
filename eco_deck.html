@@ -553,7 +553,7 @@ for (int i = 0; i &lt; 10000; i++)
           <li>Turn each function (and each anti-pattern example) into an <strong>embedding</strong> &mdash; a vector of numbers; similar code &rarr; nearby vectors</li>
           <li>For each anti-pattern, find the <strong>top ~500 nearest functions</strong> (code-aware embeddings beat text-based ones by ~3&times;)</li>
           <li>Re-rank with strict code-similarity metrics &rarr; a smaller, high-confidence shortlist per anti-pattern <em>(paper doesn't give the exact cutoff)</em></li>
-          <li>The LLM is never called blind &mdash; only on functions that are <em>hot AND look like a known anti-pattern</em></li>
+          <li>The LLM is never called blind &mdash; only on the <strong>re-ranked shortlist</strong> (functions that are <em>hot AND look like a known anti-pattern</em>), not all 500</li>
         </ul>
         <p class="takeaway">This is the <strong>strong prior</strong> &mdash; evolution with where-to-mutate pre-selected.</p>
       </div>
@@ -633,6 +633,7 @@ for (int i = 0; i &lt; 10000; i++)
           </li>
           <li>Strips variable names &amp; comments before comparing &mdash; focuses on <em>structure</em></li>
           <li>Conservative matches preferred</li>
+          <li>Only this <strong>shortlist</strong> (not all 500) goes to the LLM in Stage 3</li>
         </ul>
       </div>
     </div>
